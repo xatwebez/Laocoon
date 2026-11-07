@@ -26,16 +26,20 @@ jobs:
         run: dotnet build src/Laocoon.csproj -c Release
 
       # 124 个键 × 12 种语言的完整性检查；缺任何一个键就以非 0 退出，让这一步红掉。
-      # 注意：程序是 GUI 子系统的 exe，PowerShell 直接调用不会等它跑完、也拿不到退出码，
-      # 必须用 Start-Process -Wait -PassThru 才是可靠的。
+      # 注意：程序是 GUI 子系统的 exe，PowerShell 直接调用（& $exe）根本不会等待，
+      # 6ms 就返回、既没有输出也没有退出码，所以必须 Start-Process -Wait。
+      # 除了退出码，再断言日志里有 "i18ncheck OK"，多一层兜底。
       - name: Check translation tables
         shell: pwsh
         run: |
           $exe = "src\bin\Release\net48\Laocoon.exe"
-          $log = "$env:RUNNER_TEMP\i18ncheck.log"
-          $p = Start-Process -FilePath $exe -ArgumentList "--i18ncheck" -NoNewWindow -Wait -PassThru -RedirectStandardOutput $log
+          $log = Join-Path $env:RUNNER_TEMP "i18ncheck.log"
+          $p = Start-Process -FilePath $exe -ArgumentList "--i18ncheck" -Wait -PassThru -RedirectStandardOutput $log
           Get-Content $log
-          if ($p.ExitCode -ne 0) { throw "i18ncheck failed (exit $($p.ExitCode))" }
+          $text = Get-Content $log -Raw
+          if ($p.ExitCode -ne 0 -or $text -notmatch "i18ncheck OK") {
+            throw "i18ncheck failed (exit code: $($p.ExitCode))"
+          }
 
       - name: Upload exe
         uses: actions/upload-artifact@v4
