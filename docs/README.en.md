@@ -9,7 +9,7 @@
 
 You see a window you don't recognise — possibly something nasty. Press `F2`, drag the crosshair onto it, click. It lays out everything it can dig up about that window and the process behind it.
 
-- Single file `Laocoon.exe`, about **202 KB**
+- Single file `Laocoon.exe`, about **208 KB**
 - Zero third-party dependencies — only the .NET Framework 4.x that ships with Windows (Win10 / Win11, nothing to install)
 - No network, no upload, no registry writes, no config files, no background agent (unzip, run — and nothing is left on disk)
 - Twelve languages built in: **中文 / English / Русский / Français / Español / العربية / Deutsch / Português / 日本語 / 한국어 / हिन्दी / Italiano**
@@ -99,6 +99,7 @@ The whole report is plain text: columns line up, sections are separated, so you 
 
 ## Changelog
 
+- **1.4.4** — Fixed an occasional crash when holding an arrow key to switch languages fast: the window-handle rebuild no longer happens inside the picker's own message handling, and the RTL flip waits until the keys are released
 - **1.4.3** — No more `Laocoon.ini`: the language follows the system, a manual switch lasts for the current run only, and the program leaves no file on disk
 - **1.4.2** — The three language files merged into one `Lang.cs`; pure housekeeping, no change to UI, wording or behaviour
 - **1.4.1** — Fixed the language picker losing focus when switching to or from Arabic, which silently broke keyboard switching; focus now returns to the list so arrow keys keep working
@@ -143,6 +144,7 @@ Laocoon.exe --aimtest              self-test hit testing and the aiming overlay
 Laocoon.exe --i18ncheck            check all 12 languages for missing keys, column width, fonts, direction
 Laocoon.exe --langswitch           walk through every language, verify UI text and report follow
 Laocoon.exe --focustest f.log [shot.png]  cycle through all 12 languages, check the picker keeps focus
+Laocoon.exe --langstress 300 [log] [--rtl] simulate key-repeat switching, check handle rebuilds and resource stability
 Laocoon.exe --biditest out.png     side-by-side of 8 bidi layouts (Arabic + Latin data)
 Laocoon.exe --lang=ru              start in a given language (not written to the ini)
 Laocoon.exe --uishot out.png --lang=ar            render the UI to a PNG

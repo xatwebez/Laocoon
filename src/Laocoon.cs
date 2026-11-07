@@ -1,4 +1,4 @@
-﻿// Laocoön 拉奥孔 - 窗口探针 (Window Probe)
+// Laocoön 拉奥孔 - 窗口探针 (Window Probe)
 // 名字来自特洛伊木马：所有人都在往城里拖那匹木马，只有拉奥孔一矛捅进马腹，听里面的金属声。
 // 这里做的是同一件事：用准星戳一下窗口，把它藏着的一切都听出来。
 // 用法：按 F2 -> 鼠标变十字靶 -> 悬停目标窗口 -> 左键锁定
@@ -121,6 +121,8 @@ namespace Laocoon
         public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
         [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam, uint fuFlags, uint uTimeout, out IntPtr lpdwResult);
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
         [DllImport("user32.dll", EntryPoint = "GetWindowLongW", SetLastError = true)]
         static extern int GetWindowLong32(IntPtr hWnd, int nIndex);
         [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
@@ -137,6 +139,10 @@ namespace Laocoon
         public static extern int DwmGetWindowAttribute(IntPtr hWnd, int attr, out int value, int size);
 
         // ---- kernel32 ----
+        // 0 = GDI 对象数，1 = USER 对象数。两者都有进程级上限（默认各 10000），
+        // 高频切语言时如果只增不减，就是资源泄漏。
+        [DllImport("user32.dll")]
+        public static extern uint GetGuiResources(IntPtr hProcess, uint flags);
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern IntPtr OpenProcess(int access, bool inherit, int pid);
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
@@ -1112,13 +1118,38 @@ namespace Laocoon
         bool _syncingLang;      // 程序内部同步下拉框时抑制回调
         Report _report;
 
+        // 用户按住方向键时，SelectedIndexChanged 会以键重复的频率连续触发。
+        // 切换语言要重建句柄（RTL 翻转），绝不能在下拉框自己的消息处理里做，
+        // 所以这里只记下目标，挂到消息队列之后再真正应用；多次请求合并成一次。
+        int _pendingLang = -1;
+        bool _langPosted;
+        bool _langKeepFocus;
+
+        // 镜像方向翻转的消抖：连续切换期间不重建句柄，静下来再翻
+        bool _dirPending;
+        readonly Timer _dirTimer = new Timer();
+
+        // 字体按族名缓存：每切一次语言就 new 一个 Font 会造成不必要的 GDI 对象周转，
+        // 而 Font 是不可变的，同族同号的实例可以共用（进程内最多十几种）。
+        static readonly Dictionary<string, Font> _fontCache = new Dictionary<string, Font>();
+
+        static Font CachedFont(string family, float size)
+        {
+            string key = family + "|" + size.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            Font f;
+            if (_fontCache.TryGetValue(key, out f) && f != null) return f;
+            f = new Font(family, size);
+            _fontCache[key] = f;
+            return f;
+        }
+
         public MainForm()
         {
             Text = L.T("app.title");
             StartPosition = FormStartPosition.CenterScreen;
             ClientSize = new Size(1000, 720);
             MinimumSize = new Size(900, 520);
-            Font = new Font(L.UiFont, 9F);
+            Font = CachedFont(L.UiFont, 9F);
             BackColor = Color.FromArgb(244, 246, 249);
             KeyPreview = true;
             AutoScaleMode = AutoScaleMode.Dpi;
@@ -1126,6 +1157,9 @@ namespace Laocoon
 
             _frame = new FrameForm();
             _hud = new HudForm();
+
+            _dirTimer.Interval = 180;
+            _dirTimer.Tick += DirectionTimerTick;
 
             TableLayoutPanel root = new TableLayoutPanel();
             root.Dock = DockStyle.Fill;
@@ -1242,6 +1276,10 @@ namespace Laocoon
         // 阿拉伯语界面整体镜像（从右到左），其余语言保持从左到右。
         // 报告框单独钉死为 LTR —— 里面是路径、哈希、类名这类技术数据，
         // 跟着镜像会把一行的首尾颠倒过来，反而读不了。
+        //
+        // 注意：翻转 RightToLeftLayout 会让窗体连同所有子控件销毁并重建窗口句柄，
+        // 这是整个程序里最重、也最容易出事的一步（ComboBox 的原生窗口就在被销毁之列，
+        // comctl32 里曾因此报过 0xc0000005）。所以连续切换时不要做，等按键停下来再做。
         void ApplyDirection()
         {
             bool rtl = L.IsRtl;
@@ -1250,17 +1288,57 @@ namespace Laocoon
             _txt.RightToLeft = RightToLeft.No;
         }
 
-        // 语言切换后把所有界面文字重新贴一遍，并按新语言重排报告
-        internal void ApplyLanguage()
+        // 方向翻转推迟到"停止切换"之后：按住方向键时每跨一次阿拉伯语都重建一次句柄，
+        // 一秒两次的频率下偶尔就会撞上原生层崩溃。这里改成消抖 —— 只有静下来 180ms
+        // 才真正翻转，一次连按最多重建一次。
+        void ScheduleDirection()
+        {
+            if (RightToLeftLayout == L.IsRtl)
+            {
+                _dirPending = false;
+                _dirTimer.Stop();
+                return;
+            }
+            _dirPending = true;
+            _dirTimer.Stop();
+            _dirTimer.Start();
+        }
+
+        void DirectionTimerTick(object sender, EventArgs e)
+        {
+            _dirTimer.Stop();
+            if (IsDisposed || !_dirPending) return;
+            if (RightToLeftLayout == L.IsRtl) { _dirPending = false; return; }
+            // 列表正展开时翻转会把它的下拉窗口一起销毁，等它收起来再说
+            if (_cboLang.DroppedDown) { _dirTimer.Start(); return; }
+
+            _dirPending = false;
+            bool retake = _cboLang.Focused || ActiveControl == _cboLang;
+            try { ApplyDirection(); }
+            catch (Exception ex) { if (Trace != null) Trace("  direction EX " + ex.GetType().Name + ": " + ex.Message); }
+            if (retake) RetakeLangFocus();
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            _dirTimer.Stop();
+            _dirTimer.Dispose();
+            base.OnFormClosed(e);
+        }
+
+        // 语言切换后把所有界面文字重新贴一遍，并按新语言重排报告。
+        // deferDirection=true 时只改文字，镜像方向交给 ScheduleDirection 消抖后再翻。
+        internal void ApplyLanguage(bool deferDirection)
         {
             SuspendLayout();
             _syncingLang = true;
             try
             {
                 Text = L.T("app.title");
-                Font = new Font(L.UiFont, 9F);
-                _txt.Font = new Font(L.MonoFont, 9F);
-                ApplyDirection();
+                Font = CachedFont(L.UiFont, 9F);
+                _txt.Font = CachedFont(L.MonoFont, 9F);
+                if (deferDirection) ScheduleDirection();
+                else { _dirPending = false; _dirTimer.Stop(); ApplyDirection(); }
 
                 _aim.Text = _aiming ? L.T("btn.aim.cancel") : L.T("btn.aim");
                 _bCopyText.Text = L.T("btn.copytext");
@@ -1290,26 +1368,66 @@ namespace Laocoon
             finally { _syncingLang = false; ResumeLayout(true); }
         }
 
+        // 这里只登记"想切到哪个语言"，真正的应用放到消息队列里做。
+        // 原因：切到 / 切回阿拉伯语时 RightToLeftLayout 会翻转，窗体连同所有子控件都要重建句柄；
+        // 而本方法是下拉框处理 CBN_SELCHANGE（按键、点选都会走到这里）的同步回调，
+        // 在控件自己的消息处理里销毁它自己的窗口句柄，时序一对上就是原生层崩溃 —— 进程直接消失。
+        // 按住方向键时这个回调按键重复频率连发，撞上的概率被放大，所以必须挪出去。
         void OnLangChanged()
         {
             if (!_ready || _syncingLang) return;
             int i = _cboLang.SelectedIndex;
             if (i < 0 || i >= L.All.Length) return;
 
-            // 切到 / 切回阿拉伯语时 RightToLeftLayout 会翻转，窗体连同所有子控件都要重建句柄，
-            // 焦点会掉到窗体上（甚至谁都没有）——键盘切换就此断掉，而且断了就再也接不上。
-            // 先记住焦点原本在下拉框上，切完再还给它。
+            // 切到 / 切回阿拉伯语时句柄重建会让焦点掉到窗体上（甚至谁都没有），
+            // 键盘切换就此断掉，而且断了就再也接不上。先记住焦点原本在下拉框上，切完再还给它。
             // 列表若正展开着，跨越边界这一下会被句柄重建收起来；这里不重开 ——
             // 鼠标点选时 DroppedDown 同样是 true，重开会让列表在被点完之后自己又弹出来。
-            bool retake = _cboLang.Focused || ActiveControl == _cboLang;
+            if (_cboLang.Focused || ActiveControl == _cboLang) _langKeepFocus = true;
 
-            L.Set(L.All[i]);
-            ApplyLanguage();
-            SetStatus(L.T("st.langchanged"));
+            _pendingLang = i;
+            if (_langPosted) return;          // 已经排过一次队，连发的这几次合并进那一趟
+
+            _langPosted = true;
+            try { BeginInvoke((MethodInvoker)ApplyPendingLang); }
+            catch { _langPosted = false; }
+        }
+
+        // 把排队的语言切换真正落地。多次请求只应用最后一次 —— 中间那些谁也没看见。
+        void ApplyPendingLang()
+        {
+            _langPosted = false;
+            int i = _pendingLang;
+            _pendingLang = -1;
+            if (IsDisposed) return;
+
+            bool retake = _langKeepFocus;
+            _langKeepFocus = false;
+
+            if (i >= 0 && i < L.All.Length)
+            {
+                try
+                {
+                    if (Trace != null) Trace("  apply enter " + L.Code(L.All[i]));
+                    L.Set(L.All[i]);
+                    ApplyLanguage(true);
+                    SetStatus(L.T("st.langchanged"));
+                    if (Trace != null) Trace("  apply done " + L.Code(L.Current));
+                }
+                catch (Exception ex)
+                {
+                    // 界面重贴失败不该带走整个进程；真出事也要留下痕迹
+                    if (Trace != null) Trace("  apply EX " + ex.GetType().Name + ": " + ex.Message);
+                }
+            }
 
             if (retake) RetakeLangFocus();
         }
 
+        // 诊断钩子：探针把它指向日志，正常运行时为 null，不产生任何输出
+        internal static Action<string> Trace;
+
+        static void Tr(string s) { if (Trace != null) Trace(s); }
         // 句柄重建的收尾要到这一轮消息处理完之后才结束，当场 Focus() 会被随后的收尾动作顶掉，
         // 所以补焦点必须往后挪一拍。
         void RetakeLangFocus()
@@ -1421,6 +1539,121 @@ namespace Laocoon
             }
         }
 
+        // 诊断用：模拟"按住方向键不放"时的高频切换（键重复约 30 次/秒）。
+        // 按键走 PostMessage + DoEvents，即真的由消息泵派发进 ComboBox 的 WndProc，
+        // 与真人按住不放的路径一致 —— 句柄重建就发生在 ComboBox 自己的消息处理里。
+        // 同时采样 GDI / USER 句柄数：只增不减就是泄漏，撞到进程上限后程序会直接消失。
+        internal void LangStressProbe(string logPath, int count, bool rtlOnly)
+        {
+            Action<string> w = delegate(string s)
+            {
+                try { File.AppendAllText(logPath, s + "\r\n", new UTF8Encoding(false)); }
+                catch { }
+            };
+
+            Application.ThreadException += delegate(object s, System.Threading.ThreadExceptionEventArgs e)
+            {
+                w("ThreadException " + e.Exception.GetType().Name + ": " + e.Exception.Message
+                    + "\r\n" + e.Exception.StackTrace);
+            };
+            AppDomain.CurrentDomain.UnhandledException += delegate(object s, UnhandledExceptionEventArgs e)
+            {
+                Exception ex = e.ExceptionObject as Exception;
+                w("Unhandled " + (ex == null ? "?" : ex.GetType().Name + ": " + ex.Message)
+                    + "\r\n" + (ex == null ? "" : ex.StackTrace));
+            };
+
+            w("== langstress start: " + count + " 次  mode=" + (rtlOnly ? "rtl" : "cycle") + " ==");
+            Trace = w;
+            try
+            {
+                if (!Visible) Show();
+                Application.DoEvents();
+                Activate();
+                Application.DoEvents();          // 等激活真正落地，否则焦点会被窗体收回去
+                _cboLang.Focus();
+                Application.DoEvents();
+
+                IntPtr proc = Nat.GetCurrentProcess();
+                uint gdi0 = Nat.GetGuiResources(proc, 0);
+                uint usr0 = Nat.GetGuiResources(proc, 1);
+                w("句柄基线 gdi=" + gdi0 + " user=" + usr0
+                    + "  combo=" + _cboLang.Focused + "  handle=0x" + _cboLang.Handle.ToInt64().ToString("X"));
+
+                int switched = 0, lost = 0;
+                uint gdiMax = gdi0, usrMax = usr0;
+                Stopwatch sw = Stopwatch.StartNew();
+
+                // 按住方向键时键重复约 30 次/秒，也就是连续切换之间只隔 ~25ms；
+                // 真人通常是"连按一阵、停一下、再连按"，所以按"连发 + 静默"的节奏模拟。
+                const int burstSize = 25, gapMs = 25, quietMs = 450;   // 奇数：每阵结束时停在阿语，便于核对方向
+                int bursts = Math.Max(1, count / burstSize);
+                int idxZh = Array.IndexOf(L.All, LangId.Zh);
+                int idxAr = Array.IndexOf(L.All, LangId.Ar);
+
+                for (int b = 0; b < bursts; b++)
+                {
+                    long tBurst = sw.ElapsedMilliseconds;
+                    // 遍历模式：每阵都从列表头开始，保证这一阵真的会跨过阿拉伯语
+                    if (!rtlOnly) { _cboLang.SelectedIndex = 0; Application.DoEvents(); }
+                    w("  阵前 rtl=" + (RightToLeftLayout ? "y" : "n") + " lang=" + L.Code(L.Current)
+                        + " handle=0x" + _cboLang.Handle.ToInt64().ToString("X"));
+                    for (int k = 0; k < burstSize; k++)
+                    {
+                        if (rtlOnly)
+                        {
+                            // 中/阿之间来回：每次切换都会改变镜像方向，是最狠的场景
+                            _cboLang.SelectedIndex = L.IsRtl ? idxZh : idxAr;
+                            Application.DoEvents();
+                            switched++;
+                        }
+                        else
+                        {
+                            int idx = _cboLang.SelectedIndex;
+                            bool down = idx < L.All.Length - 1;
+                            Nat.PostMessage(_cboLang.Handle, 0x0100 /*WM_KEYDOWN*/,
+                                (IntPtr)(down ? 0x28 /*VK_DOWN*/ : 0x26 /*VK_UP*/), IntPtr.Zero);
+                            Application.DoEvents();
+                            if (_cboLang.SelectedIndex != idx) switched++;
+                        }
+                        if (!_cboLang.Focused) lost++;
+                        if (k == burstSize - 1)
+                            w("  阵末(静默前) rtl=" + (RightToLeftLayout ? "y" : "n")
+                                + " handle=0x" + _cboLang.Handle.ToInt64().ToString("X"));
+                        System.Threading.Thread.Sleep(gapMs);   // 键重复间隔
+                    }
+
+                    // 松手：静默一段时间，消抖计时器应当在这时把镜像方向翻过来
+                    long idle = 0;
+                    while (idle < quietMs) { Application.DoEvents(); System.Threading.Thread.Sleep(15); idle += 15; }
+
+                    uint g = Nat.GetGuiResources(proc, 0), u = Nat.GetGuiResources(proc, 1);
+                    if (g > gdiMax) gdiMax = g;
+                    if (u > usrMax) usrMax = u;
+                    w("  第 " + (b + 1) + " 阵 @" + (sw.ElapsedMilliseconds - tBurst) + "ms  lang=" + L.Code(L.Current)
+                        + "  rtl=" + (RightToLeftLayout ? "y" : "n") + " (期望 " + (L.IsRtl ? "y" : "n") + ")"
+                        + "  gdi=" + g + " user=" + u + " combo=" + _cboLang.Focused);
+                }
+
+                uint gdi1 = Nat.GetGuiResources(proc, 0);
+                uint usr1 = Nat.GetGuiResources(proc, 1);
+                w("结束 gdi=" + gdi1 + " (峰值 " + gdiMax + ")  user=" + usr1 + " (峰值 " + usrMax + ")");
+                w("切换次数=" + switched + "  丢焦点=" + lost);
+                bool dirOk = RightToLeftLayout == L.IsRtl
+                    && RightToLeft == (L.IsRtl ? RightToLeft.Yes : RightToLeft.No)
+                    && _txt.RightToLeft == RightToLeft.No;
+                w("最终方向 rtl=" + (RightToLeftLayout ? "y" : "n") + " 期望=" + (L.IsRtl ? "y" : "n")
+                    + (dirOk ? "  direction OK" : "  direction FAILED"));
+                bool leak = (gdi1 - gdi0) > 100 || gdiMax - gdi0 > 200;
+                w(leak ? "langstress LEAK" : "langstress OK");
+            }
+            catch (Exception ex)
+            {
+                w("EX " + ex.GetType().Name + ": " + ex.Message + "\r\n" + ex.StackTrace);
+                w("langstress CRASH");
+            }
+        }
+
         static string Welcome()
         {
             return L.T("welcome").Replace("\n", "\r\n");
@@ -1450,7 +1683,7 @@ namespace Laocoon
             t.ScrollBars = wrap ? ScrollBars.Vertical : ScrollBars.Both;
             t.WordWrap = wrap;
             t.BorderStyle = BorderStyle.None;
-            t.Font = new Font(L.MonoFont, 9F);
+            t.Font = CachedFont(L.MonoFont, 9F);
             t.BackColor = Color.White;
             t.ForeColor = Color.FromArgb(23, 26, 32);
             t.MaxLength = 4000000;
@@ -1761,6 +1994,16 @@ namespace Laocoon
                 return;
             }
 
+            if (args.Length > 0 && args[0] == "--langstress")
+            {
+                int n = 300;
+                if (args.Length > 1) { int.TryParse(args[1], out n); }
+                if (n <= 0) n = 300;
+                LangStress(args.Length > 2 ? args[2] : "", n,
+                    Array.IndexOf(args, "--rtl") >= 0);
+                return;
+            }
+
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             Application.Run(new MainForm());
@@ -1877,6 +2120,23 @@ namespace Laocoon
             Environment.Exit(0);
         }
 
+        static void LangStress(string path, int count, bool rtlOnly)
+        {
+            if (path.Length == 0) path = "langstress.log";
+            try { File.WriteAllText(path, "", new UTF8Encoding(false)); } catch { }
+
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
+            using (MainForm f = new MainForm())
+            {
+                f.LangStressProbe(path, count, rtlOnly);
+                f.Close();
+            }
+
+            Environment.Exit(0);
+        }
+
         // 诊断用：模拟用户在语言下拉框里逐个切换，检查界面文字是否全部跟着变
         static void LangSwitchTest()
         {
@@ -1893,7 +2153,7 @@ namespace Laocoon
                 foreach (LangId id in L.All)
                 {
                     L.Set(id);
-                    f.ApplyLanguage();
+                    f.ApplyLanguage(false);
                     Application.DoEvents();
                     string probe = f.UiProbe();
                     Console.WriteLine(probe);
@@ -1926,7 +2186,7 @@ namespace Laocoon
                     foreach (LangId id in L.All)
                     {
                         L.Set(id);
-                        f.ApplyLanguage();
+                        f.ApplyLanguage(false);
                         Application.DoEvents();
                         string txt = f.ReportText();
                         bool has = txt.IndexOf(L.T("rep.sec1"), StringComparison.Ordinal) >= 0;

@@ -9,7 +9,7 @@
 
 Você vê uma janela que não reconhece — talvez algo indesejado. Pressione `F2`, leve a mira até ela, clique. Ele despeja tudo o que dá para extrair daquela janela e do processo por trás dela.
 
-- Um único arquivo `Laocoon.exe`, cerca de **202 KB**
+- Um único arquivo `Laocoon.exe`, cerca de **208 KB**
 - Zero dependências de terceiros: apenas o .NET Framework 4.x que já vem com o Windows (Win10 / Win11, nada para instalar)
 - Sem rede, sem upload, sem escrever no registro, sem arquivo de configuração, sem agente em segundo plano (descompacta, executa e nada fica no disco)
 - Doze idiomas embutidos: **中文 / English / Русский / Français / Español / العربية / Deutsch / Português / 日本語 / 한국어 / हिन्दी / Italiano**
@@ -99,6 +99,7 @@ O relatório inteiro é texto puro: colunas alinhadas, seções separadas; dá p
 
 ## Histórico de versões
 
+- **1.4.4** — Corrigido um encerramento inesperado ocasional ao trocar de idioma rapidamente com a seta pressionada: a recriação dos identificadores de janela já não acontece dentro do tratamento de mensagens da lista, e o espelhamento RTL espera que as teclas sejam soltas
 - **1.4.3** — Fim do `Laocoon.ini`: o idioma segue o sistema, a troca manual vale só para esta execução e o programa não deixa arquivo algum
 - **1.4.2** — Os três arquivos de idiomas unidos em um único `Lang.cs`; arrumação de código, sem mudanças de interface ou texto
 - **1.4.1** — Corrigido: o seletor de idioma perdia o foco ao mudar para o árabe ou voltar, quebrando a troca pelo teclado sem aviso; o foco volta ao seletor
@@ -143,6 +144,7 @@ Laocoon.exe --aimtest              autoteste de hit-testing e da camada de mira
 Laocoon.exe --i18ncheck            conferir os 12 idiomas: chaves, largura de coluna, fontes, direção
 Laocoon.exe --langswitch           percorrer todos os idiomas e verificar interface e relatório
 Laocoon.exe --focustest f.log [shot.png]  percorrer os 12 idiomas e verificar se o seletor mantém o foco
+Laocoon.exe --langstress 300 [log] [--rtl] simula a repetição das setas: recriação de identificadores e recursos
 Laocoon.exe --biditest out.png     comparativo de 8 layouts bidi (árabe + dados latinos)
 Laocoon.exe --lang=ru              iniciar em um idioma específico (não grava no ini)
 Laocoon.exe --uishot out.png --lang=ar            renderizar a interface em PNG

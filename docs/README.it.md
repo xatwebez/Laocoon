@@ -9,7 +9,7 @@
 
 Vedi una finestra che non riconosci — magari qualcosa di indesiderato. Premi `F2`, porta il mirino sopra, clicca. Tira fuori tutto ciò che si può estrarre da quella finestra e dal processo che la sostiene.
 
-- Un solo file `Laocoon.exe`, circa **202 KB**
+- Un solo file `Laocoon.exe`, circa **208 KB**
 - Zero dipendenze di terze parti: solo il .NET Framework 4.x fornito con Windows (Win10 / Win11, niente da installare)
 - Nessuna rete, nessun upload, nessuna scrittura nel registro, nessun file di configurazione, nessun agente in background (si scompatta, si avvia e sul disco non resta nulla)
 - Dodici lingue integrate: **中文 / English / Русский / Français / Español / العربية / Deutsch / Português / 日本語 / 한국어 / हिन्दी / Italiano**
@@ -99,6 +99,7 @@ L'intero rapporto è testo semplice: colonne allineate, sezioni separate; puoi s
 
 ## Cronologia versioni
 
+- **1.4.4** — Corretto un arresto anomalo occasionale cambiando lingua rapidamente con la freccia premuta: la ricreazione degli handle di finestra non avviene più dentro la gestione dei messaggi della casella, e lo specchio RTL attende il rilascio dei tasti
 - **1.4.3** — Basta `Laocoon.ini`: la lingua segue il sistema, il cambio manuale vale solo per l'esecuzione corrente e il programma non lascia file
 - **1.4.2** — I tre file delle lingue riuniti in un unico `Lang.cs`; solo riordino del codice, interfaccia e testi invariati
 - **1.4.1** — Corretto: l'elenco delle lingue perdeva il focus passando all'arabo o tornando indietro, interrompendo il cambio da tastiera senza avvisi; ora il focus torna sull'elenco
@@ -143,6 +144,7 @@ Laocoon.exe --aimtest              autotest di hit-testing e dell'overlay di mir
 Laocoon.exe --i18ncheck            controllare le 12 lingue: chiavi, larghezza colonne, font, direzione
 Laocoon.exe --langswitch           scorrere tutte le lingue e verificare interfaccia e rapporto
 Laocoon.exe --focustest f.log [shot.png]  scorrere tutte e 12 le lingue e verificare che l'elenco mantenga il focus
+Laocoon.exe --langstress 300 [log] [--rtl] simula la ripetizione dei tasti: ricreazione degli handle e risorse
 Laocoon.exe --biditest out.png     confronto di 8 impaginazioni bidi (arabo + dati latini)
 Laocoon.exe --lang=ru              avviare in una lingua specifica (non scrive nell'ini)
 Laocoon.exe --uishot out.png --lang=ar            rendere l'interfaccia in PNG

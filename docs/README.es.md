@@ -9,7 +9,7 @@
 
 Ves una ventana que no reconoces — puede que algo indeseable. Pulsa `F2`, lleva la mira encima y haz clic. Sacará todo lo que se pueda extraer de esa ventana y del proceso que la sostiene.
 
-- Un solo archivo `Laocoon.exe`, unos **202 KB**
+- Un solo archivo `Laocoon.exe`, unos **208 KB**
 - Cero dependencias de terceros: solo el .NET Framework 4.x que viene con Windows (Win10 / Win11, nada que instalar)
 - Sin red, sin subidas, sin escribir en el registro, sin ningún archivo de configuración, sin agente en segundo plano (se descomprime, se ejecuta y no queda nada en el disco)
 - Doce idiomas integrados: **中文 / English / Русский / Français / Español / العربية / Deutsch / Português / 日本語 / 한국어 / हिन्दी / Italiano**
@@ -99,6 +99,7 @@ Todo el informe es texto plano: columnas alineadas y secciones separadas; puedes
 
 ## Historial de versiones
 
+- **1.4.4** — Corregido un cierre inesperado ocasional al cambiar de idioma rápido manteniendo una flecha: la recreación de los identificadores de ventana ya no ocurre dentro del manejo de mensajes del desplegable, y el espejo RTL espera a que se suelten las teclas
 - **1.4.3** — Ya no hay `Laocoon.ini`: el idioma sigue al sistema, el cambio manual solo vale para esta ejecución y el programa no deja ningún archivo
 - **1.4.2** — Los tres archivos de idiomas unidos en un solo `Lang.cs`; puesta en orden, sin cambios de interfaz ni de textos
 - **1.4.1** — Corregido: el selector de idioma perdía el foco al pasar al árabe o al volver, y el cambio por teclado se cortaba sin avisar; ahora el foco vuelve al selector
@@ -143,6 +144,7 @@ Laocoon.exe --aimtest              autoprueba del hit-testing y de la capa de pu
 Laocoon.exe --i18ncheck            revisar los 12 idiomas: claves, ancho de columna, fuentes, dirección
 Laocoon.exe --langswitch           recorrer todos los idiomas y comprobar interfaz e informe
 Laocoon.exe --focustest f.log [shot.png]  recorrer los 12 idiomas y comprobar que el selector conserva el foco
+Laocoon.exe --langstress 300 [log] [--rtl] simula la repetición de flechas: recreación de handles y recursos
 Laocoon.exe --biditest out.png     comparativa de 8 maquetaciones bidi (árabe + datos latinos)
 Laocoon.exe --lang=ru              arrancar en un idioma dado (no se escribe en el ini)
 Laocoon.exe --uishot out.png --lang=ar            renderizar la interfaz a PNG

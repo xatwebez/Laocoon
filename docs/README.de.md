@@ -9,7 +9,7 @@
 
 Da ist ein Fenster, das Sie nicht kennen — vielleicht etwas Unangenehmes. `F2` drücken, Fadenkreuz darüberziehen, klicken. Es legt alles offen, was sich über dieses Fenster und den dahinterstehenden Prozess herausfinden lässt.
 
-- Einzelne Datei `Laocoon.exe`, etwa **202 KB**
+- Einzelne Datei `Laocoon.exe`, etwa **208 KB**
 - Keine Fremdabhängigkeiten — nur das .NET Framework 4.x, das Windows mitbringt (Win10 / Win11, nichts zu installieren)
 - Kein Netz, kein Upload, keine Registry-Einträge, keine Konfigurationsdatei, kein Hintergrunddienst (entpacken, starten — nichts bleibt auf der Platte)
 - Zwölf Sprachen eingebaut: **中文 / English / Русский / Français / Español / العربية / Deutsch / Português / 日本語 / 한국어 / हिन्दी / Italiano**
@@ -99,6 +99,7 @@ Der ganze Bericht ist reiner Text: Spalten sind ausgerichtet, Abschnitte getrenn
 
 ## Versionsverlauf
 
+- **1.4.4** — Gelegentlicher Absturz beim schnellen Sprachwechsel per gehaltener Pfeiltaste behoben: Die Neuerzeugung der Fenster-Handles passiert nicht mehr in der Nachrichtenbehandlung der Auswahlliste, und die RTL-Spiegelung wartet, bis die Tasten losgelassen sind
 - **1.4.3** — Keine `Laocoon.ini` mehr: die Sprache folgt dem System, manuelles Umschalten gilt nur für den laufenden Start, und es bleibt keine Datei zurück
 - **1.4.2** — Die drei Sprachdateien zu einer `Lang.cs` zusammengelegt; reine Aufräumarbeit, Oberfläche und Texte unverändert
 - **1.4.1** — Behoben: Die Sprachliste verlor beim Wechsel nach oder aus Arabisch den Fokus, wodurch die Tastaturumschaltung still abbrach; der Fokus kehrt jetzt zurück
@@ -143,6 +144,7 @@ Laocoon.exe --aimtest              Selbsttest für Trefferprüfung und Zielüber
 Laocoon.exe --i18ncheck            die 12 Sprachen prüfen: Schlüssel, Spaltenbreite, Schriften, Richtung
 Laocoon.exe --langswitch           alle Sprachen durchschalten, Oberfläche und Bericht vergleichen
 Laocoon.exe --focustest f.log [shot.png]  alle 12 Sprachen durchschalten und prüfen, ob die Liste den Fokus behält
+Laocoon.exe --langstress 300 [log] [--rtl] simuliert die Tastenwiederholung: Handle-Neuerzeugung und Ressourcen
 Laocoon.exe --biditest out.png     Vergleich von 8 Bidi-Layouts (Arabisch + lateinische Daten)
 Laocoon.exe --lang=ru              in einer bestimmten Sprache starten (schreibt nicht in die ini)
 Laocoon.exe --uishot out.png --lang=ar            Oberfläche als PNG rendern
