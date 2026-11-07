@@ -9,9 +9,9 @@
 
 Você vê uma janela que não reconhece — talvez algo indesejado. Pressione `F2`, leve a mira até ela, clique. Ele despeja tudo o que dá para extrair daquela janela e do processo por trás dela.
 
-- Um único arquivo `Laocoon.exe`, cerca de **199 KB**
+- Um único arquivo `Laocoon.exe`, cerca de **202 KB**
 - Zero dependências de terceiros: apenas o .NET Framework 4.x que já vem com o Windows (Win10 / Win11, nada para instalar)
-- Sem rede, sem upload, sem escrever no registro, sem agente em segundo plano (um único `Laocoon.ini` ao lado do exe, só para lembrar o idioma)
+- Sem rede, sem upload, sem escrever no registro, sem arquivo de configuração, sem agente em segundo plano (descompacta, executa e nada fica no disco)
 - Doze idiomas embutidos: **中文 / English / Русский / Français / Español / العربية / Deutsch / Português / 日本語 / 한국어 / हिन्दी / Italiano**
 
 > O nome do arquivo é `Laocoon.exe`, em ASCII; o título da janela mantém o trema — `Laocoön`.
@@ -50,13 +50,13 @@ A captura é única: nada se atualiza por temporizador, nada fica em segundo pla
 
 Por que esses doze: os idiomas dos cinco membros permanentes do Conselho de Segurança da ONU como base, mais **árabe** (o único idioma de trabalho da ONU que falta nessa lista), **alemão / português / japonês / coreano** (grandes economias e ecossistemas de software), **hindi** (o maior mercado monolíngue em população) e **italiano** (cultura europeia). Turco, indonésio, vietnamita e polonês ficaram de fora — o ponto de extensão está aberto: acrescentar um idioma é acrescentar uma tabela em `Lang.cs`.
 
-Na primeira execução o idioma é decidido nesta ordem, e a escolha vai para `lang=` no `Laocoon.ini`:
+Na primeira execução o idioma é decidido nesta ordem:
 
 ```
---lang=xx na linha de comando  >  lang=xx no Laocoon.ini  >  idioma do sistema  >  inglês
+--lang=xx na linha de comando  >  idioma do sistema  >  inglês
 ```
 
-Ou seja, um sistema chinês abre em chinês; sistemas russo / francês / espanhol / árabe / alemão / português / japonês / coreano / hindi / italiano mostram o seu; o resto cai no inglês (variantes regionais como `pt-BR`, `zh-Hant`, `ar-EG` são reconhecidas). Para fixar o idioma, escreva `lang=ru` no `Laocoon.ini`.
+Ou seja, um sistema chinês abre em chinês; sistemas russo / francês / espanhol / árabe / alemão / português / japonês / coreano / hindi / italiano mostram o seu; o resto cai no inglês (variantes regionais como `pt-BR`, `zh-Hant`, `ar-EG` são reconhecidas). A troca vale só para esta execução — nada é salvo; para fixar o idioma, inicie `Laocoon.exe --lang=ru` (ou crie um atalho com esse argumento).
 
 Não é só a interface que é traduzida: **o corpo do relatório** também — rótulos, títulos de seção e avisos heurísticos («o executável está na pasta temporária», «o processo tem N janelas de nível superior ocultas») são gerados no idioma atual.
 
@@ -99,6 +99,7 @@ O relatório inteiro é texto puro: colunas alinhadas, seções separadas; dá p
 
 ## Histórico de versões
 
+- **1.4.3** — Fim do `Laocoon.ini`: o idioma segue o sistema, a troca manual vale só para esta execução e o programa não deixa arquivo algum
 - **1.4.2** — Os três arquivos de idiomas unidos em um único `Lang.cs`; arrumação de código, sem mudanças de interface ou texto
 - **1.4.1** — Corrigido: o seletor de idioma perdia o foco ao mudar para o árabe ou voltar, quebrando a troca pelo teclado sem aviso; o foco volta ao seletor
 - **1.4** — Novo ícone em pixel art: 8 tamanhos de 16 a 256 embutidos no exe, iguais na barra de título, na barra de tarefas e no explorador

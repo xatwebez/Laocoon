@@ -10,8 +10,7 @@ obj/
 *.pdb
 *.ildoc
 
-# 运行时生成的配置：每个用户自己的语言设置
-Laocoon.ini
+# 诊断输出（--focustest 的日志等）
 *.log
 
 # ---- 编辑器 / 系统 ----

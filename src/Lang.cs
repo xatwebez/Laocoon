@@ -9,7 +9,7 @@
 // 印地语（人口最大的单一语言市场）、意大利语（欧洲文化圈）。
 //
 // 所有文案都编译进 exe 本身，不生成 .resources / satellite assembly，保持"单文件、零依赖"。
-// 选择优先级：命令行 --lang=xx  >  Laocoon.ini 的 lang=xx  >  系统界面语言  >  英语
+// 选择优先级：命令行 --lang=xx  >  系统界面语言  >  英语
 using System;
 using System.Collections.Generic;
 using System.Drawing;

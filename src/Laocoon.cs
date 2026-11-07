@@ -1111,7 +1111,6 @@ namespace Laocoon
         bool _ready;            // 构造函数跑完才允许语言切换回调生效
         bool _syncingLang;      // 程序内部同步下拉框时抑制回调
         Report _report;
-        string _iniPath = "";
 
         public MainForm()
         {
@@ -1234,7 +1233,6 @@ namespace Laocoon
             root.Controls.Add(statusPanel, 0, 2);
             Controls.Add(root);
 
-            _iniPath = Path.Combine(Application.StartupPath, "Laocoon.ini");
             ApplyDirection();
             _txt.Text = Welcome();
             TextBoxDirection(true);
@@ -1306,7 +1304,6 @@ namespace Laocoon
             bool retake = _cboLang.Focused || ActiveControl == _cboLang;
 
             L.Set(L.All[i]);
-            SaveSettings();
             ApplyLanguage();
             SetStatus(L.T("st.langchanged"));
 
@@ -1705,44 +1702,11 @@ namespace Laocoon
             }
             catch (Exception ex) { SetStatus(L.F("st.openfail", ex.Message)); }
         }
-
-        // 只记界面语言，切语言后下次启动沿用
-        void SaveSettings()
-        {
-            try
-            {
-                StringBuilder sb = new StringBuilder();
-                sb.Append("lang=").Append(L.Code(L.Current)).Append("\r\n");
-                File.WriteAllText(_iniPath, sb.ToString(), new UTF8Encoding(false));
-            }
-            catch { }
-        }
     }
 
     #endregion
 
     #region ---------- 入口 ----------
-
-    // Laocoon.ini 的极简读取（只读，写由 MainForm.SaveSettings 负责）
-    internal static class Ini
-    {
-        public static string Get(string path, string key)
-        {
-            try
-            {
-                if (!File.Exists(path)) return "";
-                foreach (string line in File.ReadAllLines(path, Encoding.UTF8))
-                {
-                    int i = line.IndexOf('=');
-                    if (i <= 0) continue;
-                    if (line.Substring(0, i).Trim().Equals(key, StringComparison.OrdinalIgnoreCase))
-                        return line.Substring(i + 1).Trim();
-                }
-            }
-            catch { }
-            return "";
-        }
-    }
 
     internal static class Program
     {
@@ -1802,23 +1766,14 @@ namespace Laocoon
             Application.Run(new MainForm());
         }
 
-        // 语言优先级：--lang=xx  >  Laocoon.ini 的 lang=xx  >  系统界面语言  >  英语
+        // 语言优先级：--lang=xx  >  系统界面语言  >  英语
+        // 不落盘：切过的语言只在本次运行有效，下次启动重新按上面的顺序判定
         static void BootstrapLanguage(string[] args)
         {
-            string cli = "";
-            foreach (string a in args)
-                if (a.StartsWith("--lang=", StringComparison.OrdinalIgnoreCase)) cli = a.Substring(7);
-
             L.Set(L.Detect());
-            if (cli.Length > 0) { L.Set(cli); return; }
 
-            try
-            {
-                string ini = Path.Combine(Application.StartupPath, "Laocoon.ini");
-                string v = Ini.Get(ini, "lang");
-                if (v.Length > 0) L.Set(v);
-            }
-            catch { }
+            foreach (string a in args)
+                if (a.StartsWith("--lang=", StringComparison.OrdinalIgnoreCase)) { L.Set(a.Substring(7)); break; }
         }
 
         // 诊断用：检查全部语言的键是否齐全、标签列宽是否合理、字体是否真的存在
@@ -1911,18 +1866,13 @@ namespace Laocoon
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            // 探针会把语言切一圈，每次切换都会顺手写 ini —— 先存下原样，跑完还原
-            string ini = Path.Combine(Application.StartupPath, "Laocoon.ini");
-            string before = "";
-            try { if (File.Exists(ini)) before = File.ReadAllText(ini); } catch { }
-
+            // 探针会把语言切一圈；程序本身已不再写任何配置文件，跑完无需还原
             using (MainForm f = new MainForm())
             {
                 f.FocusSwitchProbe(path, shot);
                 f.Close();
             }
 
-            try { if (before.Length > 0) File.WriteAllText(ini, before, new UTF8Encoding(false)); } catch { }
             Environment.Exit(0);
         }
 
