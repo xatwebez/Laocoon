@@ -1,6 +1,6 @@
 # Laocoön · فاحص النوافذ
 
-[中文](README.md) · [English](README.en.md) · [Русский](README.ru.md) · [Français](README.fr.md) · [Español](README.es.md) · **العربية** · [Deutsch](README.de.md) · [Português](README.pt.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [हिन्दी](README.hi.md) · [Italiano](README.it.md)
+[中文](../README.md) · [English](README.en.md) · [Русский](README.ru.md) · [Français](README.fr.md) · [Español](README.es.md) · **العربية** · [Deutsch](README.de.md) · [Português](README.pt.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [हिन्दी](README.hi.md) · [Italiano](README.it.md)
 
 > أمام طروادة، أراد الجميع جرّ ذلك الحصان الخشبي إلى داخل المدينة. لاوكون وحده رفض.
 > غرز رمحه في بطنه — فسمع داخله صوت اصطدام الحديد.

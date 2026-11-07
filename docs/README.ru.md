@@ -1,6 +1,6 @@
 # Laocoön · Зонд окон
 
-[中文](README.md) · [English](README.en.md) · **Русский** · [Français](README.fr.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Deutsch](README.de.md) · [Português](README.pt.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [हिन्दी](README.hi.md) · [Italiano](README.it.md)
+[中文](../README.md) · [English](README.en.md) · **Русский** · [Français](README.fr.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Deutsch](README.de.md) · [Português](README.pt.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [हिन्दी](README.hi.md) · [Italiano](README.it.md)
 
 > Под Троей все хотели втащить этого деревянного коня в город. Не поверил только Лаокоон.
 > Он вонзил копьё ему в брюхо — и услышал внутри лязг оружия.

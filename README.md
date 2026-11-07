@@ -1,6 +1,6 @@
 # Laocoön 拉奥孔 · 窗口探针
 
-**中文** · [English](README.en.md) · [Русский](README.ru.md) · [Français](README.fr.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Deutsch](README.de.md) · [Português](README.pt.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [हिन्दी](README.hi.md) · [Italiano](README.it.md)
+**中文** · [English](docs/README.en.md) · [Русский](docs/README.ru.md) · [Français](docs/README.fr.md) · [Español](docs/README.es.md) · [العربية](docs/README.ar.md) · [Deutsch](docs/README.de.md) · [Português](docs/README.pt.md) · [日本語](docs/README.ja.md) · [한국어](docs/README.ko.md) · [हिन्दी](docs/README.hi.md) · [Italiano](docs/README.it.md)
 
 > 特洛伊城下，所有人都急着把那匹木马拖进城，只有拉奥孔不信。
 > 他一矛捅进马腹 —— 里面传出兵器相撞的金属声。

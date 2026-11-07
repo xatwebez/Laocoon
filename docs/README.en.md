@@ -1,6 +1,6 @@
 # Laocoön · Window Probe
 
-[中文](README.md) · **English** · [Русский](README.ru.md) · [Français](README.fr.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Deutsch](README.de.md) · [Português](README.pt.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [हिन्दी](README.hi.md) · [Italiano](README.it.md)
+[中文](../README.md) · **English** · [Русский](README.ru.md) · [Français](README.fr.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Deutsch](README.de.md) · [Português](README.pt.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [हिन्दी](README.hi.md) · [Italiano](README.it.md)
 
 > Outside Troy everyone wanted to haul that wooden horse inside. Only Laocoön refused.
 > He drove his spear into its belly — and heard metal clashing within.

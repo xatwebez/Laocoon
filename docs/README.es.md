@@ -1,6 +1,6 @@
 # Laocoön · Sonda de ventanas
 
-[中文](README.md) · [English](README.en.md) · [Русский](README.ru.md) · [Français](README.fr.md) · **Español** · [العربية](README.ar.md) · [Deutsch](README.de.md) · [Português](README.pt.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [हिन्दी](README.hi.md) · [Italiano](README.it.md)
+[中文](../README.md) · [English](README.en.md) · [Русский](README.ru.md) · [Français](README.fr.md) · **Español** · [العربية](README.ar.md) · [Deutsch](README.de.md) · [Português](README.pt.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [हिन्दी](README.hi.md) · [Italiano](README.it.md)
 
 > A las puertas de Troya todos querían meter ese caballo de madera en la ciudad. Solo Laocoonte se negó.
 > Hundió su lanza en el vientre — y oyó armas chocando dentro.

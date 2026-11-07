@@ -1,6 +1,6 @@
 # Laocoön · Sonda de janelas
 
-[中文](README.md) · [English](README.en.md) · [Русский](README.ru.md) · [Français](README.fr.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Deutsch](README.de.md) · **Português** · [日本語](README.ja.md) · [한국어](README.ko.md) · [हिन्दी](README.hi.md) · [Italiano](README.it.md)
+[中文](../README.md) · [English](README.en.md) · [Русский](README.ru.md) · [Français](README.fr.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Deutsch](README.de.md) · **Português** · [日本語](README.ja.md) · [한국어](README.ko.md) · [हिन्दी](README.hi.md) · [Italiano](README.it.md)
 
 > Diante de Troia, todos queriam arrastar aquele cavalo de madeira para dentro da cidade. Só Laocoonte se recusou.
 > Ele cravou a lança na barriga do cavalo — e ouviu armas se chocando lá dentro.

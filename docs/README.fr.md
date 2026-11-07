@@ -1,6 +1,6 @@
 # Laocoön · Sonde de fenêtres
 
-[中文](README.md) · [English](README.en.md) · [Русский](README.ru.md) · **Français** · [Español](README.es.md) · [العربية](README.ar.md) · [Deutsch](README.de.md) · [Português](README.pt.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [हिन्दी](README.hi.md) · [Italiano](README.it.md)
+[中文](../README.md) · [English](README.en.md) · [Русский](README.ru.md) · **Français** · [Español](README.es.md) · [العربية](README.ar.md) · [Deutsch](README.de.md) · [Português](README.pt.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [हिन्दी](README.hi.md) · [Italiano](README.it.md)
 
 > Devant Troie, tout le monde voulait faire entrer ce cheval de bois dans la ville. Seul Laocoon refusa.
 > Il enfonça sa lance dans son ventre — et entendit des armes s'entrechoquer à l'intérieur.

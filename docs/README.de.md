@@ -1,6 +1,6 @@
 # Laocoön · Fenster-Sonde
 
-[中文](README.md) · [English](README.en.md) · [Русский](README.ru.md) · [Français](README.fr.md) · [Español](README.es.md) · [العربية](README.ar.md) · **Deutsch** · [Português](README.pt.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [हिन्दी](README.hi.md) · [Italiano](README.it.md)
+[中文](../README.md) · [English](README.en.md) · [Русский](README.ru.md) · [Français](README.fr.md) · [Español](README.es.md) · [العربية](README.ar.md) · **Deutsch** · [Português](README.pt.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [हिन्दी](README.hi.md) · [Italiano](README.it.md)
 
 > Vor Troja wollten alle das hölzerne Pferd in die Stadt ziehen. Nur Laokoon weigerte sich.
 > Er stieß seinen Speer in seinen Bauch — und hörte darin Waffen klirren.

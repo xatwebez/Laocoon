@@ -1,6 +1,6 @@
 # Laocoön · विंडो प्रोब
 
-[中文](README.md) · [English](README.en.md) · [Русский](README.ru.md) · [Français](README.fr.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Deutsch](README.de.md) · [Português](README.pt.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · **हिन्दी** · [Italiano](README.it.md)
+[中文](../README.md) · [English](README.en.md) · [Русский](README.ru.md) · [Français](README.fr.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Deutsch](README.de.md) · [Português](README.pt.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · **हिन्दी** · [Italiano](README.it.md)
 
 > ट्रॉय के फाटक पर सब उस लकड़ी के घोड़े को नगर में खींच लाना चाहते थे। सिर्फ़ लाओकून ने माना नहीं।
 > उसने अपना भाला उसके पेट में घोंपा — और भीतर से हथियारों के टकराने की धातु-ध्वनि सुनाई दी।

@@ -1,6 +1,6 @@
 # Laocoön · ウィンドウ探針
 
-[中文](README.md) · [English](README.en.md) · [Русский](README.ru.md) · [Français](README.fr.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Deutsch](README.de.md) · [Português](README.pt.md) · **日本語** · [한국어](README.ko.md) · [हिन्दी](README.hi.md) · [Italiano](README.it.md)
+[中文](../README.md) · [English](README.en.md) · [Русский](README.ru.md) · [Français](README.fr.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Deutsch](README.de.md) · [Português](README.pt.md) · **日本語** · [한국어](README.ko.md) · [हिन्दी](README.hi.md) · [Italiano](README.it.md)
 
 > トロイアの城門前で、誰もがその木馬を城内へ引き入れようとしていた。ラオコーンだけが信じなかった。
 > 彼は槍を馬の腹に突き立て —— 中から武器のぶつかる金属音が聞こえた。

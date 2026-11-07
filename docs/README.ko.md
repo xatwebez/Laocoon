@@ -1,6 +1,6 @@
 # Laocoön · 창 프로브
 
-[中文](README.md) · [English](README.en.md) · [Русский](README.ru.md) · [Français](README.fr.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Deutsch](README.de.md) · [Português](README.pt.md) · [日本語](README.ja.md) · **한국어** · [हिन्दी](README.hi.md) · [Italiano](README.it.md)
+[中文](../README.md) · [English](README.en.md) · [Русский](README.ru.md) · [Français](README.fr.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Deutsch](README.de.md) · [Português](README.pt.md) · [日本語](README.ja.md) · **한국어** · [हिन्दी](README.hi.md) · [Italiano](README.it.md)
 
 > 트로이 성문 앞에서 모두가 그 목마를 성 안으로 끌어들이려 했다. 라오콘만은 믿지 않았다.
 > 그는 창을 말의 배에 찔러 넣었고 — 안에서 무기 부딪히는 쇳소리가 들려왔다.
