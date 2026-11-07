@@ -1,0 +1,26 @@
+# ---- 构建产物 ----
+bin/
+obj/
+
+# 临时目录（make_icon.py 的对照图也放这里）
+.tmp/
+
+# 生成的可执行文件：正式版走 GitHub Releases，不入库
+*.exe
+*.pdb
+*.ildoc
+
+# 运行时生成的配置：每个用户自己的语言设置
+Laocoon.ini
+*.log
+
+# ---- 编辑器 / 系统 ----
+.vs/
+.vscode/
+*.user
+*.suo
+Thumbs.db
+Desktop.ini
+
+# ---- WorkBuddy 工作区数据 ----
+.workbuddy/

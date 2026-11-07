@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>5</LangVersion>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>Laocoon</AssemblyName>
+    <RootNamespace>Laocoon</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Laocoon.ico</ApplicationIcon>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
+    <Optimize>true</Optimize>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <Deterministic>true</Deterministic>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <SatelliteResourceLanguages>zh-Hans</SatelliteResourceLanguages>
+    <AssemblyTitle>Laocoön 拉奥孔 · 窗口探针</AssemblyTitle>
+    <Product>Laocoön 拉奥孔</Product>
+    <Company>Laocoön</Company>
+    <Description>用准星戳一下窗口，听里面藏着什么：采集任意窗口及其所属进程的全部可辨识信息</Description>
+    <Version>1.4.2</Version>
+    <FileVersion>1.4.2.0</FileVersion>
+    <NoWarn>CS0168;CS0219;CS0414;CS0649</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Management" />
+    <Reference Include="System.Security" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Laocoon.ico">
+      <LogicalName>Laocoon.ico</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>

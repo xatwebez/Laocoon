@@ -1,2 +1,16 @@
-# Auto detect text files and perform LF normalization
+# 默认：文本按 LF 归一化，检出沿用平台默认
 * text=auto
+
+# 源码统一 LF，避免 Windows / macOS 之间来回改动
+*.cs      text eol=lf
+*.csproj  text eol=lf
+*.manifest text eol=lf
+*.py      text eol=lf
+
+# 批处理交给 cmd.exe，必须 CRLF
+*.bat     text eol=crlf
+
+# 二进制，禁止任何换行或编码转换
+*.ico     binary
+*.png     binary
+*.exe     binary
