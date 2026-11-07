@@ -3,6 +3,7 @@ name: build
 on:
   push:
     branches: [ "main" ]
+    tags: [ "v*" ]        # 打 v* 标签会额外触发发布步骤
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
@@ -11,10 +12,14 @@ jobs:
   build:
     # net48 + WinForms：只能在 Windows 上编译，ubuntu-latest 找不到 Windows 桌面引用
     runs-on: windows-latest
+    permissions:
+      contents: write      # 打 tag 时要创建 / 更新 Release
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # --generate-notes 要读完整提交历史
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
@@ -47,3 +52,42 @@ jobs:
           name: Laocoon-exe
           path: src/bin/Release/net48/Laocoon.exe
           if-no-files-found: error
+
+      # ---------- 以下只在推送 v* 标签时执行 ----------
+
+      # 版本号手写在 csproj 里、标签手打在 git 上，两者很容易对不上。
+      # 不一致就中止，免得发布出去的 exe 里写着旧版本号。
+      - name: Check tag matches project version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF_NAME -replace '^v', ''
+          # 用正则而不是 [xml] 解析：csproj 里有中文 Description，非 UTF-8 环境下解析会炸
+          $m = Select-String -Path "src/Laocoon.csproj" -Pattern '<Version>([^<]+)</Version>'
+          $ver = $m.Matches[0].Groups[1].Value
+          Write-Host "tag = $tag, csproj Version = $ver"
+          if ($tag -ne $ver) {
+            throw "标签 $env:GITHUB_REF_NAME 与 src/Laocoon.csproj 的 Version $ver 不一致"
+          }
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $exe = "src\bin\Release\net48\Laocoon.exe"
+
+          # 同一个 tag 重跑（比如修好 CI 后重推）不能重复创建，改成覆盖附件
+          gh release view $tag > $null 2>&1
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Release $tag 已存在，覆盖附件"
+            gh release upload $tag $exe --clobber
+          } else {
+            Write-Host "创建 Release $tag"
+            gh release create $tag $exe --title "Laocoon $tag" --generate-notes
+          }
+          if ($LASTEXITCODE -ne 0) { throw "发布失败" }
+
+          Get-ChildItem $exe | Select-Object Name, Length | Format-Table
