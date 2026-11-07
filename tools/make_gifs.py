@@ -5,7 +5,8 @@ Laocoon README 像素动画生成器
 两个动效，共用同一套 8 色调色板（沿用图标的 6 色 + 2 个过渡色），
 全部在 160x90 的逻辑网格上作画，最后按整数倍最近邻放大，边缘永远不模糊。
 
-    laocoon.gif  —— 名字的来历：准星像一矛捅进木马腹部，里面掉出来的是窗口
+    laocoon.gif  —— 名字的来历：一矛捅进木马腹部，披甲的小人从破口里跳出来，
+                    准星锁定其中一个，旁边弹出信息框
     detect.gif   —— 它干什么：按 F2，准星压住窗口，报告升起，连藏起来的窗口也列出来
 
 约定：
@@ -19,6 +20,7 @@ Laocoon README 像素动画生成器
     python tools/make_gifs.py --sheet    # 顺带导出 .tmp/sheet_*.png 对照图
 """
 
+import math
 import os
 import sys
 
@@ -164,70 +166,137 @@ def big_window(d, x, y, w, h, lines=0, dark=False, dot=False):
         rect(d, x + 4, y + 8 + i * 4, max(6, lw), 1, DIM if dark else STEEL)
 
 
-# 木马侧影：马身、斜脖子、朝右的马头，一次画成一个多边形
-HORSE_BODY = [
-    (44, 33), (46, 29), (92, 29), (96, 23), (102, 13), (107, 9),
-    (109, 5), (113, 5), (113, 10), (126, 11), (131, 14), (131, 20),
-    (119, 22), (110, 27), (105, 37), (102, 45), (98, 49),
-    (50, 49), (45, 45), (44, 37),
-]
+# ---------------------------------------------------------------- 木马
+
+# 比例照真实侧影取：腿长 ≈ 体深，头长 ≈ 半个体长。
+# 坐标是 160x90 逻辑网格上的绝对值，改动时整段平移即可。
+GROUND = 79
+HX = -10            # 整匹马的横向位移：给右侧的准星和信息框留出地方
+BELLY = 42          # 矛尖扎进去的高度
+HOLE_CX = 72        # 腹部开口的横向中心
+HCX = HOLE_CX + HX  # 位移之后开口的实际横坐标
 
 
-def horse(d, ox=0, oy=0, hole=0, rim=None, hole_h=12):
-    """木马：马身 + 四条腿 + 车台 + 两个轮子。hole 是腹部开口的宽度。"""
-    def R(x, y, w, h, c):
-        rect(d, x + ox, y + oy, w, h, c)
+def _mask(shapes):
+    m = Image.new("L", (W, H), 0)
+    dm = ImageDraw.Draw(m)
+    for kind, data in shapes:
+        if kind == "e":
+            dm.ellipse(data, fill=255)
+        else:
+            dm.polygon(data, fill=255)
+    return m
 
-    def P(pts, c):
-        d.polygon([(x + ox, y + oy) for x, y in pts], fill=c)
 
-    # 地面投影
-    R(46, 85, 58, 2, EDGE)
+def _blit(d, m, body=STEEL, edge=EDGE, under=DIM):
+    """遮罩一次成形：内部填 body，外圈 1px 描边，朝下的边压暗做出体积。"""
+    px = m.load()
 
-    # 尾巴（压在身后）
-    P([(45, 30), (40, 34), (37, 43), (34, 55), (37, 55), (41, 44), (46, 36)], DIM)
+    def on(x, y):
+        return 0 <= x < W and 0 <= y < H and px[x, y] > 0
 
-    # 车台
-    R(46, 69, 58, 4, STEEL)
-    R(46, 72, 58, 1, EDGE)
+    for y in range(H):
+        for x in range(W):
+            if not on(x, y):
+                continue
+            if on(x - 1, y) and on(x + 1, y) and on(x, y - 1) and on(x, y + 1):
+                d.point((x, y), fill=body)
+            else:
+                d.point((x, y), fill=under if not on(x, y + 1) else edge)
 
-    # 后腿（远）先画，前腿（近）压在上面
-    R(54, 49, 5, 20, DIM)
-    R(80, 49, 5, 20, DIM)
-    R(64, 49, 5, 20, STEEL)
-    R(90, 49, 5, 20, STEEL)
-    for lx in (54, 64, 80, 90):
-        R(lx, 67, 5, 2, EDGE)
 
-    # 马身
-    P(HORSE_BODY, STEEL)
-    R(50, 47, 48, 2, DIM)          # 腹部暗边
+def _mv(pts, ox, oy):
+    return [(x + ox, y + oy) for x, y in pts]
 
-    # 鬃毛：脖子背面几粒锯齿
-    R(96, 21, 2, 3, DIM)
-    R(99, 16, 2, 3, DIM)
-    R(102, 12, 2, 3, DIM)
 
-    # 眼与鼻
-    R(116, 14, 2, 2, EDGE)
-    R(127, 17, 1, 2, EDGE)
+# 远侧的腿、尾巴：先画，随后被马身压住一半
+FAR_LEGS = [[(60, 46), (67, 46), (66, 74), (62, 74)],
+            [(77, 46), (84, 46), (83, 74), (79, 74)]]
+TAIL = [(47, 31), (43, 33), (40, 42), (37, 53), (35, 64), (39, 66),
+        (41, 56), (43, 45), (49, 36)]
 
-    # 轮子
-    for wx in (60, 90):
-        disc(d, wx + ox, 79 + oy, 5, STEEL)
-        circle_outline(d, wx + ox, 79 + oy, 5, EDGE)
-        rect(d, wx + ox - 1, 79 + oy - 1, 2, 2, EDGE)
+# 近侧马身。脖子从肩部斜向右上，头接在脖子顶端、口鼻朝右下
+def capsule(p1, p2, r):
+    """沿一条轴线拉出的等宽多边形：用来画头这种又长又细的部位。"""
+    dx, dy = p2[0] - p1[0], p2[1] - p1[1]
+    n = math.hypot(dx, dy)
+    nx, ny = -dy / n, dx / n
+    pts = [(p1[0] + nx * t, p1[1] + ny * t) for t in range(-r, r + 1)]
+    pts += [(p2[0] + nx * t, p2[1] + ny * t) for t in range(r, -r - 1, -1)]
+    return pts
 
-    # 腹部开口
+
+NECK = [(83, 28), (99, 35), (105, 18), (96, 7)]
+HEAD = [capsule((99, 12), (116, 17), 6), capsule((114, 17), (124, 20), 4)]
+EARS = [[(97, 10), (99, 2), (102, 10)], [(104, 9), (106, 2), (109, 10)]]
+NEAR_LEGS = [[(51, 46), (59, 46), (57, 78), (54, 78)],
+             [(85, 46), (93, 46), (91, 78), (88, 78)]]
+
+
+def horse(d, ox=0, oy=0, hole=0, hole_h=12):
+    """木马侧影。hole 是腹部开口的宽度，0 表示还没被捅开。"""
+    # 远侧腿与尾巴暗一档
+    _blit(d, _mask([("p", _mv(p, ox, oy)) for p in FAR_LEGS]), body=DIM, edge=EDGE, under=EDGE)
+    _blit(d, _mask([("p", _mv(TAIL, ox, oy))]), body=STEEL, edge=EDGE, under=DIM)
+
+    near = [
+        ("e", (46 + ox, 26 + oy, 98 + ox, 52 + oy)),     # 躯干
+        ("e", (42 + ox, 23 + oy, 70 + ox, 51 + oy)),     # 臀
+        ("e", (82 + ox, 29 + oy, 102 + ox, 51 + oy)),    # 前胸
+        ("p", _mv(NECK, ox, oy)),
+    ]
+    near += [("p", _mv(h, ox, oy)) for h in HEAD]
+    near += [("p", _mv(e, ox, oy)) for e in EARS]
+    near += [("p", _mv(l, ox, oy)) for l in NEAR_LEGS]
+
+    m = _mask(near)
+    hx = HOLE_CX - hole // 2
+    if hole >= 10:
+        # 被劈开的木口不是矩形：四条边都带木茬
+        dm = ImageDraw.Draw(m)
+        dm.polygon(_mv([(hx + 1, 34), (hx + hole - 4, 33), (hx + hole - 1, 36),
+                        (hx + hole, 42), (hx + hole - 4, 46), (hx + 3, 45),
+                        (hx - 1, 41), (hx, 36)], ox, oy), fill=0)
+    elif hole > 0:
+        dm = ImageDraw.Draw(m)
+        dm.rectangle([hx + ox, 34 + oy, hx + hole - 1 + ox, 34 + hole_h - 1 + oy], fill=0)
+
+    _blit(d, m)
+
+    px = m.load()
+
+    def on(x, y):
+        return 0 <= x < W and 0 <= y < H and px[x, y] > 0
+
+    # 鬃毛：直接沿脖子背缘（左上方那一条）压暗一档，永远贴着真实轮廓
+    for y in range(10 + oy, 31 + oy):
+        for x in range(85 + ox, 107 + ox):
+            if on(x, y) and on(x - 1, y) and not on(x - 2, y):
+                d.point((x, y), fill=DIM)
+
+    # 木板拼缝：只在马身内部画，出头的地方不画
+    for sy in (33 + oy, 41 + oy):
+        for x in range(50 + ox, 95 + ox):
+            if on(x, sy) and on(x, sy - 1) and on(x, sy + 1) and on(x - 1, sy) and on(x + 1, sy):
+                d.point((x, sy), fill=EDGE)
+
+    # 眼、鼻孔
+    rect(d, 107 + ox, 14 + oy, 2, 2, EDGE)
+    rect(d, 122 + ox, 19 + oy, 1, 1, EDGE)
+
+    # 蹄子
+    for lx, lw in ((53, 5), (88, 5)):
+        rect(d, lx + ox, 76 + oy, lw, 2, EDGE)
+
     if hole > 0:
-        hx = 74 - hole // 2
-        rect(d, hx + ox, 34 + oy, hole, hole_h, DEEP)
-        if rim:
-            border(d, hx + ox, 34 + oy, hole, hole_h, rim)
-        if hole >= 20:
-            # 被捅开的口子不该是标准矩形，四个小缺角就是木茬
-            for nx, ny, nw in ((4, 33, 2), (21, 33, 3), (9, 46, 3), (26, 46, 2)):
-                rect(d, hx + nx + ox, ny + oy, nw, 1, DEEP)
+        # 洞口一圈是刚劈开的木断面：亮一档，形状跟着缺口走
+        # 光从上方来：只有洞口下沿的那条木茬是亮的，其余留在暗部
+        for y in range(32 + oy, 49 + oy):
+            for x in range(hx - 2 + ox, hx + hole + 3 + ox):
+                if on(x, y) and not on(x, y - 1):
+                    d.point((x, y), fill=BODY)
+
+
 
 
 def icon(d, cx, cy, pulse=None):
@@ -261,102 +330,171 @@ def blank():
 
 # ---------------------------------------------------------------- 动画一：名字的来历
 
-HOLE_Y = 33
-HOLE_H = 14
-WIN_Y = 36
-BELLY = 40
+# ---------------------------------------------------------------- 动画一：名字的来历
+
+def ground(d):
+    rect(d, 6, GROUND, W - 12, 1, EDGE)
+
+
+def spear(d, tip, y):
+    """一支矛：杆身用准星色（它是「瞄准」这个动作本身），矛尖更亮。"""
+    rect(d, max(0, tip - 38), y, min(38, tip - 6), 1, MINT)
+    d.polygon([(tip - 6, y - 2), (tip - 2, y - 2), (tip, y),
+               (tip - 2, y + 2), (tip - 6, y + 2)], fill=BODY)
+
+
+def soldier(d, cx, feet):
+    """披甲的小人：尖顶盔、面孔、胸甲、圆盾、一支长矛。feet 是脚底。"""
+    top = feet - 22
+
+    # 长矛：从脚边伸到头顶之上，握在右手
+    rect(d, cx + 5, feet - 28, 1, 26, STEEL)
+    rect(d, cx + 5, feet - 28, 1, 4, BODY)
+    rect(d, cx + 2, top + 10, 3, 1, STEEL)         # 伸出去的胳膊
+
+    # 腿
+    rect(d, cx - 2, feet - 5, 2, 5, DIM)
+    rect(d, cx + 1, feet - 5, 2, 5, DIM)
+
+    # 胸甲：上身亮、下摆暗
+    rect(d, cx - 2, top + 9, 5, 4, STEEL)
+    rect(d, cx - 2, top + 13, 5, 4, DIM)
+    border(d, cx - 2, top + 9, 5, 8, EDGE)
+
+    # 脖子压暗一像素，把头和身体分开
+    rect(d, cx - 1, top + 8, 3, 1, EDGE)
+
+    # 面孔
+    rect(d, cx - 1, top + 5, 3, 3, BODY)
+
+    # 尖顶头盔 + 帽檐
+    d.polygon([(cx - 2, top + 5), (cx - 2, top + 2), (cx, top),
+               (cx + 2, top + 2), (cx + 2, top + 5)], fill=STEEL)
+    rect(d, cx - 2, top + 4, 5, 1, EDGE)
+
+    # 圆盾
+    disc(d, cx - 6, top + 12, 4, STEEL)
+    circle_outline(d, cx - 6, top + 12, 4, EDGE)
+    disc(d, cx - 6, top + 12, 1, DIM)
+
+
+def tipbox(d, x, y, rows):
+    """信息框：和报告里的浮动 HUD 是同一套写法。rows 是已经打出来的行数。"""
+    rect(d, x, y, 40, 19, DEEP)
+    border(d, x, y, 40, 19, STEEL)
+    if rows >= 1:
+        rect(d, x + 3, y + 3, 22, 1, DIM)
+    if rows >= 2:
+        text(d, x + 3, y + 7, "PID 4412", MINT)
+    if rows >= 3:
+        rect(d, x + 3, y + 13, 28, 1, DIM)
+        rect(d, x + 3, y + 16, 18, 1, DIM)
 
 
 def gif_origin():
     reel = Reel()
-    MID = 74
+
+    def frame():
+        im, d = blank()
+        ground(d)
+        return im, d
 
     # 1) 木马静立
-    im, d = blank()
-    horse(d)
-    reel.add(im, 6)
-
-    # 2) 准星从左飞入，像一矛指向马腹
-    x0, tgt = -12, MID
-    for i in range(15):
-        t = i / 14.0
-        cx = int(round(x0 + (tgt - x0) * (1 - (1 - t) ** 2)))
-        im, d = blank()
-        horse(d)
-        brackets(d, cx, BELLY, 9, MINT, arm=4)
-        d.point((cx, BELLY), fill=BODY)
+    for _ in range(6):
+        im, d = frame()
+        horse(d, ox=HX)
         reel.add(im)
 
-    # 3) 捅进去：环扩散 + 木马被顶得一抖
+    # 2) 一支矛从左飞来，直取马腹
+    for i in range(9):
+        t = i / 8.0
+        tip = int(round(-10 + (HCX + 9) * (1 - (1 - t) ** 2)))
+        im, d = frame()
+        horse(d, ox=HX)
+        spear(d, tip, BELLY)
+        reel.add(im)
+
+    # 3) 扎进去：木屑迸溅，马身被顶得一抖
     for i in range(5):
-        im, d = blank()
-        jitter = (-1, 1, -1, 1, 0)[i]
-        horse(d, ox=jitter)
-        circle_outline(d, MID + jitter, BELLY, 10 + i * 3, MINT if i < 3 else EDGE)
-        brackets(d, MID + jitter, BELLY, 9, MINT, arm=4)
-        if i < 3:
-            k = i + 1
-            for sx, sy in ((-10, -2), (9, -3), (-7, 5), (8, 6), (-4, -8), (5, -9)):
-                d.point((MID + jitter + sx * k // 2, BELLY + sy * k // 2), fill=STEEL)
-            for sx, sy in ((-6, 0), (5, -4), (-3, 4)):
-                d.point((MID + jitter + sx, BELLY + sy), fill=BODY)
+        j = (-1, 1, -1, 1, 0)[i]
+        im, d = frame()
+        horse(d, ox=HX + j)
+        circle_outline(d, HCX + j, BELLY, 6 + i * 2, MINT if i < 3 else EDGE)
+        k = i + 1
+        for sx, sy in ((-11, -3), (10, -4), (-8, 4), (9, 5), (-5, -9), (6, -10)):
+            d.point((HCX + j + sx * k // 2, BELLY + sy * k // 2), fill=STEEL)
+        for sx, sy in ((-6, 1), (6, -3), (-3, 5)):
+            d.point((HCX + j + sx, BELLY + sy), fill=BODY)
+        if i < 2:
+            spear(d, HCX + 9, BELLY)          # 矛还插在木头上
         reel.add(im)
 
-    # 4) 腹部裂开一个口子
-    for w in (4, 10, 16, 22, 28, 33, 37):
-        im, d = blank()
-        horse(d, hole=w, rim=MINT, hole_h=HOLE_H)
-        brackets(d, MID, BELLY - 1, 13, MINT, arm=5)
+    # 4) 腹部裂开：木口不是标准矩形
+    for w in (4, 10, 16, 21, 24):
+        im, d = frame()
+        horse(d, ox=HX, hole=w)
         reel.add(im)
 
-    # 5) 洞里亮出三个窗口，一个一个来
-    positions = (58, 70, 82)
-    for n in range(1, 4):
-        for step in range(3):
-            im, d = blank()
-            horse(d, hole=37, rim=MINT, hole_h=HOLE_H)
-            for k in range(n):
-                wx = positions[k]
-                if k == n - 1 and step == 0:
-                    dashed_border(d, wx, WIN_Y, 10, 9, MINT, phase=0, dash=2, gap=2)
-                else:
-                    mini_window(d, wx, WIN_Y, 10, 9, hidden=(k == 1))
+    # 5) 披甲的小人一个接一个跳出来，落到马前面的地上
+    lands = (94, 116, 138)
+    done = []
+    for n, lx in enumerate(lands):
+        for i in range(8):
+            t = i / 7.0
+            x = (1 - t) ** 2 * (HCX + 12) + 2 * (1 - t) * t * (HCX + 26 + n * 6) + t * t * lx
+            y = (1 - t) ** 2 * (BELLY + 8) + 2 * (1 - t) * t * (BELLY - 14) + t * t * (GROUND - 1)
+            im, d = frame()
+            horse(d, ox=HX, hole=24)
+            for px in done:
+                soldier(d, px, GROUND - 1)
+            if i < 2:                                   # 从破口里崩出来的几点光
+                for sx, sy in ((10, -4), (13, 1), (9, 5), (15, -1)):
+                    d.point((HCX + sx, BELLY + sy - i * 2), fill=MINT)
+            soldier(d, int(round(x)), int(round(y)))
             reel.add(im)
-
-    # 6) 中间那个闪红点：它是藏起来的
-    for i in range(8):
-        im, d = blank()
-        horse(d, hole=37, rim=MINT, hole_h=HOLE_H)
-        for k in range(3):
-            mini_window(d, positions[k], WIN_Y, 10, 9, hidden=(k == 1),
-                        dot=(k == 1 and i % 4 < 2))
+        done.append(lx)
+        # 落地，扬起一点尘
+        im, d = frame()
+        horse(d, ox=HX, hole=24)
+        for px in done:
+            soldier(d, px, GROUND - 1)
+        for dx in (-5, -2, 3, 5):
+            d.point((lx + dx, GROUND - 1), fill=EDGE)
         reel.add(im)
 
-    # 7) 收束到程序图标
-    im, d = blank()
-    reel.add(im, 2)
-
-    im, d = blank()
-    brackets(d, 80, 45, 20, MINT, arm=7, t=2)
-    reel.add(im)
-
-    im, d = blank()
-    rect(d, 65, 34, 30, 22, DEEP)
-    rect(d, 65, 34, 30, 5, DIM)
-    brackets(d, 80, 45, 20, MINT, arm=7, t=2)
-    reel.add(im)
-
-    im, d = blank()
-    icon(d, 80, 45)
-    reel.add(im)
-
-    for i in range(3):
-        im, d = blank()
-        icon(d, 80, 45, pulse=23 + i * 4)
+    # 6) 准星从洞口移到最右边那个小人身上，收紧
+    tx, ty = 138, GROUND - 13
+    for i in range(7):
+        t = i / 6.0
+        cx = int(round(HCX + (tx - HCX) * t))
+        cy = int(round(BELLY + (ty - BELLY) * t))
+        r = int(round(17 - 5 * t))
+        im, d = frame()
+        horse(d, ox=HX, hole=24)
+        for px in lands:
+            soldier(d, px, GROUND - 1)
+        brackets(d, cx, cy, r, MINT, arm=4)
+        d.point((cx, cy), fill=BODY)
         reel.add(im)
-    im, d = blank()
-    icon(d, 80, 45)
-    reel.add(im, 10)
+
+    def scene(rows):
+        im, d = frame()
+        horse(d, ox=HX, hole=24)
+        for px in lands:
+            soldier(d, px, GROUND - 1)
+        brackets(d, tx, ty, 12, MINT, arm=4)
+        d.point((tx, ty), fill=BODY)
+        rect(d, tx, 44, 1, 11, MINT)         # 引线
+        tipbox(d, 117, 24, rows)
+        return im
+
+    # 7) 旁边的信息框逐行打出来
+    for rows in (1, 2, 3):
+        reel.add(scene(rows))
+
+    # 8) 停住
+    for _ in range(14):
+        reel.add(scene(3))
 
     return reel
 
@@ -622,7 +760,7 @@ def main():
 
     if "--sheet" in sys.argv:
         sheet(a, os.path.join(TMP, "sheet_origin.png"),
-              [2, 12, 20, 24, 30, 42, 48, 62, len(a.frames) - 1])
+              [2, 12, 17, 22, 30, 40, 48, 58, len(a.frames) - 1])
         sheet(b, os.path.join(TMP, "sheet_detect.png"),
               [3, 7, 20, 30, 40, 50, 58, 62, len(b.frames) - 1])
 

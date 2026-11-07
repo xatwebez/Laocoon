@@ -8,7 +8,7 @@
 > Questo strumento fa la stessa cosa: **punge una finestra e ascolta cosa nasconde.**
 
 <p align="center">
-  <img src="img/laocoon.gif" width="640" alt="Un cavallo di legno su ruote viene colpito al ventre dal mirino; dentro compaiono tre finestre, una contrassegnata in rosso">
+  <img src="img/laocoon.gif" width="640" alt="Una lancia trafigge il ventre del cavallo di legno; dalla breccia saltano fuori guerrieri armati e il mirino aggancia uno di loro con una casella informativa accanto">
 </p>
 
 Vedi una finestra che non riconosci — magari qualcosa di indesiderato. Premi `F2`, porta il mirino sopra, clicca. Tira fuori tutto ciò che si può estrarre da quella finestra e dal processo che la sostiene.
