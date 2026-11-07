@@ -1806,6 +1806,7 @@ namespace Laocoon
                 + " GulimChe=" + L.FontAvailable("GulimChe")
                 + " Consolas=" + L.FontAvailable("Consolas"));
             Console.WriteLine(ok ? "i18ncheck OK" : "i18ncheck FAILED");
+            if (!ok) Environment.Exit(1);
         }
 
         // 诊断用：验证瞄准覆盖层与命中测试
@@ -1936,6 +1937,7 @@ namespace Laocoon
 
                 f.Close();
                 Console.WriteLine(ok ? "langswitch OK" : "langswitch FAILED");
+                if (!ok) Environment.Exit(1);
             }
         }
 

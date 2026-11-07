@@ -1,0 +1,45 @@
+name: build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    # net48 + WinForms：只能在 Windows 上编译，ubuntu-latest 找不到 Windows 桌面引用
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      # 仓库没有 .sln、也没有测试项目，直接指定唯一的项目文件
+      - name: Build
+        run: dotnet build src/Laocoon.csproj -c Release
+
+      # 124 个键 × 12 种语言的完整性检查；缺任何一个键就以非 0 退出，让这一步红掉。
+      # 注意：程序是 GUI 子系统的 exe，PowerShell 直接调用不会等它跑完、也拿不到退出码，
+      # 必须用 Start-Process -Wait -PassThru 才是可靠的。
+      - name: Check translation tables
+        shell: pwsh
+        run: |
+          $exe = "src\bin\Release\net48\Laocoon.exe"
+          $log = "$env:RUNNER_TEMP\i18ncheck.log"
+          $p = Start-Process -FilePath $exe -ArgumentList "--i18ncheck" -NoNewWindow -Wait -PassThru -RedirectStandardOutput $log
+          Get-Content $log
+          if ($p.ExitCode -ne 0) { throw "i18ncheck failed (exit $($p.ExitCode))" }
+
+      - name: Upload exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: Laocoon-exe
+          path: src/bin/Release/net48/Laocoon.exe
+          if-no-files-found: error
