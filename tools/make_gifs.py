@@ -5,8 +5,9 @@ Laocoon README 像素动画生成器
 两个动效，共用同一套 8 色调色板（沿用图标的 6 色 + 2 个过渡色），
 全部在 160x90 的逻辑网格上作画，最后按整数倍最近邻放大，边缘永远不模糊。
 
-    laocoon.gif  —— 名字的来历：一矛捅进木马腹部，披甲的小人从破口里跳出来，
-                    准星锁定其中一个，旁边弹出信息框
+    laocoon.gif  —— 名字的来历：木马带轮子停在城门外，祭司拉奥孔从右侧
+                    （马头这一侧，守方）走来，一矛捅进马腹，披甲的小人从
+                    左侧跳出来，信息框报出他们的来历，拉奥孔随即退步戒备
     detect.gif   —— 它干什么：按 F2，准星压住窗口，报告升起，连藏起来的窗口也列出来
 
 约定：
@@ -94,6 +95,25 @@ def disc(d, cx, cy, r, c):
                 d.point((cx + xx, cy + yy), fill=c)
 
 
+def line(d, x0, y0, x1, y1, c):
+    """1px 直线，Bresenham。矛杆要用它。"""
+    dx, dy = abs(x1 - x0), abs(y1 - y0)
+    sx = 1 if x0 < x1 else -1
+    sy = 1 if y0 < y1 else -1
+    err = dx - dy
+    while True:
+        d.point((x0, y0), fill=c)
+        if x0 == x1 and y0 == y1:
+            break
+        e2 = err * 2
+        if e2 > -dy:
+            err -= dy
+            x0 += sx
+        if e2 < dx:
+            err += dx
+            y0 += sy
+
+
 FONT = {
     "0": ("###", "#.#", "#.#", "#.#", "###"),
     "1": (".#.", "##.", ".#.", ".#.", "###"),
@@ -109,6 +129,10 @@ FONT = {
     "P": ("###", "#.#", "###", "#..", "#.."),
     "I": ("###", ".#.", ".#.", ".#.", "###"),
     "D": ("##.", "#.#", "#.#", "#.#", "##."),
+    "G": ("###", "#..", "#.#", "#.#", "###"),
+    "R": ("##.", "#.#", "##.", "#.#", "#.#"),
+    "E": ("###", "#..", "##.", "#..", "###"),
+    "K": ("#.#", "#.#", "##.", "#.#", "#.#"),
     " ": ("...", "...", "...", "...", "..."),
 }
 
@@ -122,6 +146,10 @@ def text(d, x, y, s, c, sc=1):
             for gx, bit in enumerate(row):
                 if bit == "#":
                     rect(d, x + i * 4 * sc + gx * sc, y + gy * sc, sc, sc, c)
+
+
+def text_width(s, sc=1):
+    return max(0, len(s) * 4 * sc - sc)
 
 
 # ---------------------------------------------------------------- 图形部件
@@ -168,13 +196,15 @@ def big_window(d, x, y, w, h, lines=0, dark=False, dot=False):
 
 # ---------------------------------------------------------------- 木马
 
-# 比例照真实侧影取：腿长 ≈ 体深，头长 ≈ 半个体长。
+# 比例照真实侧影取：腿短、肚子圆、头长；底下是车架和两个轮子。
 # 坐标是 160x90 逻辑网格上的绝对值，改动时整段平移即可。
 GROUND = 79
-HX = -10            # 整匹马的横向位移：给右侧的准星和信息框留出地方
+HX = -24            # 整匹马左移，右侧完全让给拉奥孔
 BELLY = 42          # 矛尖扎进去的高度
 HOLE_CX = 72        # 腹部开口的横向中心
-HCX = HOLE_CX + HX  # 位移之后开口的实际横坐标
+HCX = HOLE_CX + HX  # 位移之后开口的实际横坐标 = 48
+DECK_Y = 69         # 车架顶面
+WHEEL_Y = 75        # 轮心
 
 
 def _mask(shapes):
@@ -209,59 +239,85 @@ def _mv(pts, ox, oy):
     return [(x + ox, y + oy) for x, y in pts]
 
 
-# 远侧的腿、尾巴：先画，随后被马身压住一半
-FAR_LEGS = [[(60, 46), (67, 46), (66, 74), (62, 74)],
-            [(77, 46), (84, 46), (83, 74), (79, 74)]]
-TAIL = [(47, 31), (43, 33), (40, 42), (37, 53), (35, 64), (39, 66),
-        (41, 56), (43, 45), (49, 36)]
-
-# 近侧马身。脖子从肩部斜向右上，头接在脖子顶端、口鼻朝右下
 def capsule(p1, p2, r):
-    """沿一条轴线拉出的等宽多边形：用来画头这种又长又细的部位。"""
+    """沿一条轴线拉出的等宽多边形：用来画头、手臂这种又长又细的部位。"""
     dx, dy = p2[0] - p1[0], p2[1] - p1[1]
-    n = math.hypot(dx, dy)
+    n = math.hypot(dx, dy) or 1.0
     nx, ny = -dy / n, dx / n
     pts = [(p1[0] + nx * t, p1[1] + ny * t) for t in range(-r, r + 1)]
     pts += [(p2[0] + nx * t, p2[1] + ny * t) for t in range(r, -r - 1, -1)]
     return pts
 
 
-NECK = [(83, 28), (99, 35), (105, 18), (96, 7)]
-HEAD = [capsule((99, 12), (116, 17), 6), capsule((114, 17), (124, 20), 4)]
-EARS = [[(97, 10), (99, 2), (102, 10)], [(104, 9), (106, 2), (109, 10)]]
-NEAR_LEGS = [[(51, 46), (59, 46), (57, 78), (54, 78)],
-             [(85, 46), (93, 46), (91, 78), (88, 78)]]
+# 远侧的腿、尾巴：先画，随后被马身压住一半
+FAR_LEGS = [[(58, 46), (66, 46), (65, 68), (61, 68)],
+            [(76, 46), (84, 46), (83, 68), (79, 68)]]
+TAIL = [(46, 30), (41, 32), (38, 41), (35, 53), (33, 65), (38, 67),
+        (40, 56), (42, 44), (48, 34)]
+
+# 头和脖子是一整块。木马的头是雕出来的：比方比真马更重，也比胶囊体好认
+FRONT = [(72, 36), (86, 9), (94, 4), (102, 2), (110, 3), (116, 7),
+         (123, 12), (129, 16), (128, 20), (123, 21), (117, 23), (109, 23),
+         (103, 25), (98, 27), (94, 34)]
+EARS = [[(95, 6), (97, 0), (101, 5)], [(103, 5), (105, 0), (109, 5)]]
+NEAR_LEGS = [[(47, 46), (55, 46), (54, 69), (50, 69)],
+             [(86, 46), (94, 46), (93, 69), (89, 69)]]
+DECK = (44, 69, 55, 3)              # 车架：x, y, w, h
+WHEELS = ((52, WHEEL_Y, 4), (90, WHEEL_Y, 4))
+
+
+def wheel(d, cx, cy, r):
+    """木轮：暗底 + 一圈描边 + 十字辐条，静止时也看得出是个轮子。"""
+    disc(d, cx, cy, r, DIM)
+    circle_outline(d, cx, cy, r, EDGE)
+    rect(d, cx - 2, cy, 5, 1, EDGE)
+    rect(d, cx, cy - 2, 1, 5, EDGE)
+    rect(d, cx - 1, cy - 1, 2, 2, STEEL)
 
 
 def horse(d, ox=0, oy=0, hole=0, hole_h=12):
-    """木马侧影。hole 是腹部开口的宽度，0 表示还没被捅开。"""
+    """木马侧影：带车架和轮子。hole 是腹部开口的宽度，0 表示还没被捅开。"""
     # 远侧腿与尾巴暗一档
     _blit(d, _mask([("p", _mv(p, ox, oy)) for p in FAR_LEGS]), body=DIM, edge=EDGE, under=EDGE)
     _blit(d, _mask([("p", _mv(TAIL, ox, oy))]), body=STEEL, edge=EDGE, under=DIM)
 
     near = [
-        ("e", (46 + ox, 26 + oy, 98 + ox, 52 + oy)),     # 躯干
-        ("e", (42 + ox, 23 + oy, 70 + ox, 51 + oy)),     # 臀
-        ("e", (82 + ox, 29 + oy, 102 + ox, 51 + oy)),    # 前胸
-        ("p", _mv(NECK, ox, oy)),
+        ("e", (44 + ox, 26 + oy, 96 + ox, 52 + oy)),     # 躯干
+        ("e", (40 + ox, 23 + oy, 68 + ox, 52 + oy)),     # 臀
+        ("e", (80 + ox, 27 + oy, 98 + ox, 52 + oy)),     # 前胸
+        ("p", _mv(FRONT, ox, oy)),
     ]
-    near += [("p", _mv(h, ox, oy)) for h in HEAD]
     near += [("p", _mv(e, ox, oy)) for e in EARS]
     near += [("p", _mv(l, ox, oy)) for l in NEAR_LEGS]
 
     m = _mask(near)
     hx = HOLE_CX - hole // 2
+    hole_pts = []
     if hole >= 10:
         # 被劈开的木口不是矩形：四条边都带木茬
+        hole_pts = [(hx + 1, 34), (hx + hole - 4, 33), (hx + hole - 1, 36),
+                    (hx + hole, 42), (hx + hole - 4, 46), (hx + 3, 45),
+                    (hx - 1, 41), (hx, 36)]
         dm = ImageDraw.Draw(m)
-        dm.polygon(_mv([(hx + 1, 34), (hx + hole - 4, 33), (hx + hole - 1, 36),
-                        (hx + hole, 42), (hx + hole - 4, 46), (hx + 3, 45),
-                        (hx - 1, 41), (hx, 36)], ox, oy), fill=0)
+        dm.polygon(_mv(hole_pts, ox, oy), fill=0)
+        if hole >= 20:
+            # 再沿边啃掉几口，免得看着像一扇开好的窗
+            for bx, by in ((hx + 2, 33), (hx + 8, 32), (hx + 9, 33),
+                           (hx + hole - 5, 34), (hx + hole + 1, 39),
+                           (hx + hole - 1, 44), (hx + 4, 46), (hx + 2, 44),
+                           (hx - 2, 41), (hx - 1, 37), (hx + 13, 32)):
+                dm.point((bx + ox, by + oy), fill=0)
     elif hole > 0:
         dm = ImageDraw.Draw(m)
+        hole_pts = [(hx, 34), (hx + hole - 1, 34),
+                    (hx + hole - 1, 34 + hole_h - 1), (hx, 34 + hole_h - 1)]
         dm.rectangle([hx + ox, 34 + oy, hx + hole - 1 + ox, 34 + hole_h - 1 + oy], fill=0)
 
     _blit(d, m)
+
+    # 洞内不是空背景，是黑下来的马腹：填一档比底色更深的暗
+    if hole_pts:
+        d.polygon(_mv(hole_pts, ox, oy), fill=DEEP)
 
     px = m.load()
 
@@ -269,45 +325,196 @@ def horse(d, ox=0, oy=0, hole=0, hole_h=12):
         return 0 <= x < W and 0 <= y < H and px[x, y] > 0
 
     # 鬃毛：直接沿脖子背缘（左上方那一条）压暗一档，永远贴着真实轮廓
-    for y in range(10 + oy, 31 + oy):
-        for x in range(85 + ox, 107 + ox):
+    for y in range(4 + oy, 33 + oy):
+        for x in range(74 + ox, 100 + ox):
             if on(x, y) and on(x - 1, y) and not on(x - 2, y):
                 d.point((x, y), fill=DIM)
 
-    # 木板拼缝：只在马身内部画，出头的地方不画
-    for sy in (33 + oy, 41 + oy):
-        for x in range(50 + ox, 95 + ox):
+    # 木板拼缝：横着拼的板子，只在马身内部画，出头的地方不画
+    for sy in (30 + oy, 38 + oy, 47 + oy):
+        for x in range(44 + ox, 95 + ox):
             if on(x, sy) and on(x, sy - 1) and on(x, sy + 1) and on(x - 1, sy) and on(x + 1, sy):
                 d.point((x, sy), fill=EDGE)
 
     # 眼、鼻孔
-    rect(d, 107 + ox, 14 + oy, 2, 2, EDGE)
-    rect(d, 122 + ox, 19 + oy, 1, 1, EDGE)
-
-    # 蹄子
-    for lx, lw in ((53, 5), (88, 5)):
-        rect(d, lx + ox, 76 + oy, lw, 2, EDGE)
+    rect(d, 111 + ox, 8 + oy, 2, 2, EDGE)
+    rect(d, 126 + ox, 16 + oy, 1, 1, EDGE)
 
     if hole > 0:
         # 洞口一圈是刚劈开的木断面：亮一档，形状跟着缺口走
-        # 光从上方来：只有洞口下沿的那条木茬是亮的，其余留在暗部
-        for y in range(32 + oy, 49 + oy):
+        # 光从上方来：只有洞口下沿那条木茬亮着，上沿留在暗部
+        for y in range(44 + oy, 50 + oy):
             for x in range(hx - 2 + ox, hx + hole + 3 + ox):
                 if on(x, y) and not on(x, y - 1):
                     d.point((x, y), fill=BODY)
 
+    # 车架：横跨四条腿，被腿压住的部分后画不出来（先画先被压）
+    dx0, dy0, dw, dh = DECK
+    rect(d, dx0 + ox, dy0 + oy, dw, dh, DIM)
+    rect(d, dx0 + ox, dy0 + oy, dw, 1, STEEL)
+    rect(d, dx0 + ox, dy0 + dh - 1 + oy, dw, 1, EDGE)
+    rect(d, dx0 + ox, dy0 + oy, 1, dh, EDGE)
+    rect(d, dx0 + dw - 1 + ox, dy0 + oy, 1, dh, EDGE)
+
+    # 轮子
+    for wx, wy, wr in WHEELS:
+        wheel(d, wx + ox, wy + oy, wr)
 
 
+# ---------------------------------------------------------------- 拉奥孔
 
-def icon(d, cx, cy, pulse=None):
-    """程序自己的图标：窗口 + 准星括号 + 红点（放大版，收尾用）。"""
-    rect(d, cx - 15, cy - 11, 30, 22, BODY)
-    rect(d, cx - 15, cy - 11, 30, 5, STEEL)
-    rect(d, cx - 15, cy + 9, 30, 2, EDGE)
-    rect(d, cx + 8, cy - 10, 4, 4, RED)
-    brackets(d, cx, cy, 20, MINT, arm=7, t=2)
-    if pulse is not None:
-        circle_outline(d, cx, cy, pulse, EDGE)
+LA_H = 30           # 身高，比披甲小人高出一整个头，一眼能分出主次
+
+
+def laocoon(d, cx, feet, pose="stand", phase=0):
+    """祭司拉奥孔：长袍、束腰、背后一片披风、手中有矛。
+
+    整座城里只有他一个人提前喊停 —— 所以腰上那一圈是画面里唯一的薄荷色。
+
+    pose: walk 走 / ready 立定 / wind 蓄力 / throw 掷出 / watch 看着 / guard 戒备
+    """
+    top = feet - LA_H
+    swing = 1 if phase else 0
+
+    # 披风：先落笔，随后被身体压住贴肩的那一侧
+    cape = [("p", [(cx + 2, top + 8), (cx + 7, top + 10),
+                   (cx + 9 + swing, top + 21), (cx + 4, top + 23)])]
+    _blit(d, _mask(cape), body=DIM, edge=EDGE, under=EDGE)
+
+    # 下半身：袍摆和脚，比上身暗一档 —— 上下分开，剪影才有厚度
+    lower = [
+        ("p", [(cx - 4, top + 15), (cx + 4, top + 15),
+               (cx + 6 + swing, feet - 3), (cx - 6 + swing, feet - 3)]),
+        ("p", [(cx - 6, feet - 3), (cx - 2, feet - 3),
+               (cx - 2, feet), (cx - 6, feet)]),
+        ("p", [(cx + 2, feet - 3), (cx + 6, feet - 3),
+               (cx + 6, feet), (cx + 2, feet)]),
+    ]
+    _blit(d, _mask(lower), body=STEEL, edge=EDGE, under=EDGE)
+
+    # 上半身：头、颈、肩、手臂
+    upper = [
+        ("p", [(cx - 3, top + 2), (cx + 3, top + 2),
+               (cx + 3, top + 7), (cx - 3, top + 7)]),
+        ("p", [(cx - 1, top + 7), (cx + 1, top + 7),
+               (cx + 1, top + 9), (cx - 1, top + 9)]),
+        ("p", [(cx - 5, top + 9), (cx + 5, top + 9),
+               (cx + 4, top + 16), (cx - 4, top + 16)]),
+    ]
+
+    # 手臂：姿态全靠这两条线撑起来。单独描一遍，否则贴着袍子就分不出来
+    arms = []
+    if pose in ("walk", "ready", "watch"):
+        arms.append(("p", capsule((cx + 5, top + 10), (cx + 8, top + 16), 1)))
+        arms.append(("p", capsule((cx - 5, top + 10), (cx - 8, top + 15 + swing), 1)))
+    elif pose == "wind":
+        # 双手过顶，把矛拉到身后
+        arms.append(("p", capsule((cx + 5, top + 10), (cx + 10, top + 3), 1)))
+        arms.append(("p", capsule((cx - 5, top + 10), (cx + 2, top + 4), 1)))
+    elif pose == "throw":
+        # 送出去的那一下，两臂都还在前面
+        arms.append(("p", capsule((cx + 5, top + 10), (cx - 7, top + 12), 2)))
+        arms.append(("p", capsule((cx - 5, top + 11), (cx - 9, top + 15), 1)))
+    elif pose == "guard":
+        # 右手握矛横在身前，左手扶住矛杆，人往后仰半步
+        arms.append(("p", capsule((cx + 5, top + 10), (cx + 8, top + 11), 1)))
+        arms.append(("p", capsule((cx - 5, top + 11), (cx - 3, top + 13), 1)))
+
+    _blit(d, _mask(upper), body=BODY, edge=EDGE, under=EDGE)
+    _blit(d, _mask(arms), body=STEEL, edge=EDGE, under=EDGE)
+
+    # 发、眼、须、鼻
+    rect(d, cx - 3, top + 2, 7, 1, EDGE)
+    rect(d, cx + 2, top + 3, 1, 4, EDGE)
+    rect(d, cx - 3, top + 7, 7, 1, EDGE)         # 嘴角的阴影
+    d.point((cx - 4, top + 5), fill=BODY)         # 鼻子顶出去一格，侧脸
+    d.point((cx - 1, top + 4), fill=EDGE)         # 眼
+    d.point((cx - 2, top + 6), fill=EDGE)         # 须
+    d.point((cx - 1, top + 6), fill=EDGE)
+    # 束腰：整幅画里唯一的薄荷色 —— 只有他在报警
+    rect(d, cx - 4, top + 16, 9, 1, MINT)
+    # 袍褶
+    rect(d, cx - 2, top + 18, 1, 7, EDGE)
+    rect(d, cx + 2, top + 18, 1, 7, EDGE)
+
+    # 矛：立定时竖持，蓄力时压到身后，掷出去之后手里就空了
+    if pose in ("walk", "ready"):
+        line(d, cx + 8, top + 11, cx + 8, feet - 4, MINT)
+        rect(d, cx + 8, top, 1, 4, BODY)
+        rect(d, cx + 7, top + 4, 3, 1, MINT)
+    elif pose == "wind":
+        line(d, cx + 10, top + 4, cx + 22, top - 6, MINT)
+        d.point((cx + 22, top - 6), fill=BODY)
+        d.point((cx + 23, top - 7), fill=BODY)
+    elif pose == "guard":
+        # 又一支矛横在身前，矛尖顶向左边 —— 这个动作不用解释也看得懂
+        line(d, cx + 8, top + 11, cx - 13, top + 15, MINT)
+        d.polygon([(cx - 13, top + 15), (cx - 17, top + 14),
+                   (cx - 17, top + 17), (cx - 13, top + 16)], fill=BODY)
+
+
+# ---------------------------------------------------------------- 士兵
+
+def soldier(d, cx, feet):
+    """披甲的小人：尖顶盔、面孔、胸甲、圆盾、一支长矛。feet 是脚底。
+
+    胸甲用 BODY 而不是 STEEL —— 他们常常站在木马前面，同色会糊成一块。
+    """
+    top = feet - 22
+
+    # 长矛：从脚边伸到头顶之上，握在右手
+    rect(d, cx + 5, feet - 24, 1, 22, STEEL)
+    rect(d, cx + 5, feet - 24, 1, 3, BODY)
+    rect(d, cx + 2, top + 10, 3, 1, STEEL)         # 伸出去的胳膊
+
+    # 腿
+    rect(d, cx - 2, feet - 5, 2, 5, DIM)
+    rect(d, cx + 1, feet - 5, 2, 5, DIM)
+
+    # 胸甲：钢灰为主，只有下摆压一档 —— 白色留给拉奥孔
+    rect(d, cx - 2, top + 9, 5, 5, STEEL)
+    rect(d, cx - 2, top + 14, 5, 3, DIM)
+    border(d, cx - 2, top + 9, 5, 8, EDGE)
+
+    # 脖子压暗一像素，把头和身体分开
+    rect(d, cx - 1, top + 8, 3, 1, EDGE)
+
+    # 面孔
+    rect(d, cx - 1, top + 5, 3, 3, BODY)
+
+    # 尖顶头盔 + 帽檐
+    d.polygon([(cx - 2, top + 5), (cx - 2, top + 2), (cx, top),
+               (cx + 2, top + 2), (cx + 2, top + 5)], fill=STEEL)
+    rect(d, cx - 2, top + 4, 5, 1, EDGE)
+
+    # 圆盾
+    disc(d, cx - 6, top + 12, 4, STEEL)
+    circle_outline(d, cx - 6, top + 12, 4, EDGE)
+    disc(d, cx - 6, top + 12, 1, DIM)
+
+
+def spear(d, tip, y, length=38):
+    """一支矛，矛尖朝左（从右侧的守方手里飞出去）。"""
+    rect(d, tip + 6, y, length, 1, MINT)
+    d.polygon([(tip, y), (tip + 3, y - 2), (tip + 6, y - 1),
+               (tip + 6, y + 1), (tip + 3, y + 2)], fill=BODY)
+
+
+def racebox(d, x, y, rows):
+    """信息框：不报 PID，只报这些人是什么来路。和报告里的 HUD 同一套写法。"""
+    w, h = 42, 17
+    rect(d, x, y, w, h, DEEP)
+    border(d, x, y, w, h, STEEL)
+    rect(d, x, y - 1, 3, 1, STEEL)          # 指向下方的小尖，表示说的是下面这些人
+    rect(d, x + w - 3, y - 1, 3, 1, STEEL)
+    d.point((x + w // 2, y - 1), fill=STEEL)
+
+    if rows >= 1:
+        rect(d, x + 3, y + 3, 20, 1, DIM)
+    if rows >= 2:
+        text(d, x + (w - text_width("GREEK")) // 2, y + 7, "GREEK", MINT)
+    if rows >= 3:
+        rect(d, x + 3, y + 13, 26, 1, DIM)
 
 
 # ---------------------------------------------------------------- 帧容器
@@ -330,65 +537,14 @@ def blank():
 
 # ---------------------------------------------------------------- 动画一：名字的来历
 
-# ---------------------------------------------------------------- 动画一：名字的来历
-
 def ground(d):
     rect(d, 6, GROUND, W - 12, 1, EDGE)
 
 
-def spear(d, tip, y):
-    """一支矛：杆身用准星色（它是「瞄准」这个动作本身），矛尖更亮。"""
-    rect(d, max(0, tip - 38), y, min(38, tip - 6), 1, MINT)
-    d.polygon([(tip - 6, y - 2), (tip - 2, y - 2), (tip, y),
-               (tip - 2, y + 2), (tip - 6, y + 2)], fill=BODY)
-
-
-def soldier(d, cx, feet):
-    """披甲的小人：尖顶盔、面孔、胸甲、圆盾、一支长矛。feet 是脚底。"""
-    top = feet - 22
-
-    # 长矛：从脚边伸到头顶之上，握在右手
-    rect(d, cx + 5, feet - 28, 1, 26, STEEL)
-    rect(d, cx + 5, feet - 28, 1, 4, BODY)
-    rect(d, cx + 2, top + 10, 3, 1, STEEL)         # 伸出去的胳膊
-
-    # 腿
-    rect(d, cx - 2, feet - 5, 2, 5, DIM)
-    rect(d, cx + 1, feet - 5, 2, 5, DIM)
-
-    # 胸甲：上身亮、下摆暗
-    rect(d, cx - 2, top + 9, 5, 4, STEEL)
-    rect(d, cx - 2, top + 13, 5, 4, DIM)
-    border(d, cx - 2, top + 9, 5, 8, EDGE)
-
-    # 脖子压暗一像素，把头和身体分开
-    rect(d, cx - 1, top + 8, 3, 1, EDGE)
-
-    # 面孔
-    rect(d, cx - 1, top + 5, 3, 3, BODY)
-
-    # 尖顶头盔 + 帽檐
-    d.polygon([(cx - 2, top + 5), (cx - 2, top + 2), (cx, top),
-               (cx + 2, top + 2), (cx + 2, top + 5)], fill=STEEL)
-    rect(d, cx - 2, top + 4, 5, 1, EDGE)
-
-    # 圆盾
-    disc(d, cx - 6, top + 12, 4, STEEL)
-    circle_outline(d, cx - 6, top + 12, 4, EDGE)
-    disc(d, cx - 6, top + 12, 1, DIM)
-
-
-def tipbox(d, x, y, rows):
-    """信息框：和报告里的浮动 HUD 是同一套写法。rows 是已经打出来的行数。"""
-    rect(d, x, y, 40, 19, DEEP)
-    border(d, x, y, 40, 19, STEEL)
-    if rows >= 1:
-        rect(d, x + 3, y + 3, 22, 1, DIM)
-    if rows >= 2:
-        text(d, x + 3, y + 7, "PID 4412", MINT)
-    if rows >= 3:
-        rect(d, x + 3, y + 13, 28, 1, DIM)
-        rect(d, x + 3, y + 16, 18, 1, DIM)
+def quad(p0, p1, p2, t):
+    u = 1 - t
+    return (u * u * p0[0] + 2 * u * t * p1[0] + t * t * p2[0],
+            u * u * p0[1] + 2 * u * t * p1[1] + t * t * p2[1])
 
 
 def gif_origin():
@@ -399,26 +555,49 @@ def gif_origin():
         ground(d)
         return im, d
 
-    # 1) 木马静立
+    LX = 130                 # 拉奥孔的站位：马头这一侧，也就是守方
+    lands = (40, 26, 12)     # 三个小人依次往左落，最左那个紧贴画框
+    FOCUS = lands[1]         # 准星最后锁中间那个，正好在信息框正下方
+
+    # 1) 木马连轮子停在城外
     for _ in range(6):
         im, d = frame()
         horse(d, ox=HX)
         reel.add(im)
 
-    # 2) 一支矛从左飞来，直取马腹
-    for i in range(9):
-        t = i / 8.0
-        tip = int(round(-10 + (HCX + 9) * (1 - (1 - t) ** 2)))
+    # 2) 拉奥孔从右侧走进画面
+    for i in range(10):
+        t = i / 9.0
+        x = int(round(170 + (LX - 170) * (1 - (1 - t) ** 2)))
         im, d = frame()
         horse(d, ox=HX)
-        spear(d, tip, BELLY)
+        laocoon(d, x, GROUND, pose="walk", phase=i % 2)
         reel.add(im)
 
-    # 3) 扎进去：木屑迸溅，马身被顶得一抖
+    # 3) 立定、蓄力、出手
+    for pose in ("ready", "wind", "throw"):
+        im, d = frame()
+        horse(d, ox=HX)
+        laocoon(d, LX, GROUND, pose=pose)
+        reel.add(im, 2)
+
+    # 4) 一矛从右往左飞过去，直取马腹
+    for i in range(12):
+        t = i / 11.0
+        tip = int(round(152 + (HCX - 152) * t))
+        im, d = frame()
+        horse(d, ox=HX)
+        laocoon(d, LX, GROUND, pose="throw")
+        if tip > HCX - 3:
+            spear(d, tip, BELLY)
+        reel.add(im)
+
+    # 5) 扎进去：木屑迸溅，马身被顶得一抖
     for i in range(5):
         j = (-1, 1, -1, 1, 0)[i]
         im, d = frame()
         horse(d, ox=HX + j)
+        laocoon(d, LX, GROUND, pose="throw")
         circle_outline(d, HCX + j, BELLY, 6 + i * 2, MINT if i < 3 else EDGE)
         k = i + 1
         for sx, sy in ((-11, -3), (10, -4), (-8, 4), (9, 5), (-5, -9), (6, -10)):
@@ -429,22 +608,25 @@ def gif_origin():
             spear(d, HCX + 9, BELLY)          # 矛还插在木头上
         reel.add(im)
 
-    # 4) 腹部裂开：木口不是标准矩形
+    # 6) 腹部裂开：木口不是标准矩形
     for w in (4, 10, 16, 21, 24):
         im, d = frame()
         horse(d, ox=HX, hole=w)
+        laocoon(d, LX, GROUND, pose="throw")
         reel.add(im)
 
-    # 5) 披甲的小人一个接一个跳出来，落到马前面的地上
-    lands = (94, 116, 138)
+    # 7) 披甲的小人一个接一个跳出来，越过马身落到左边
     done = []
     for n, lx in enumerate(lands):
-        for i in range(8):
-            t = i / 7.0
-            x = (1 - t) ** 2 * (HCX + 12) + 2 * (1 - t) * t * (HCX + 26 + n * 6) + t * t * lx
-            y = (1 - t) ** 2 * (BELLY + 8) + 2 * (1 - t) * t * (BELLY - 14) + t * t * (GROUND - 1)
+        p0 = (HCX, BELLY + 8)
+        p1 = (HCX - (HCX - lx) * 0.35, BELLY - 16)
+        p2 = (lx, GROUND - 1)
+        for i in range(7):
+            t = i / 6.0
+            x, y = quad(p0, p1, p2, t)
             im, d = frame()
             horse(d, ox=HX, hole=24)
+            laocoon(d, LX, GROUND, pose="watch")
             for px in done:
                 soldier(d, px, GROUND - 1)
             if i < 2:                                   # 从破口里崩出来的几点光
@@ -456,45 +638,58 @@ def gif_origin():
         # 落地，扬起一点尘
         im, d = frame()
         horse(d, ox=HX, hole=24)
+        laocoon(d, LX, GROUND, pose="watch")
         for px in done:
             soldier(d, px, GROUND - 1)
         for dx in (-5, -2, 3, 5):
             d.point((lx + dx, GROUND - 1), fill=EDGE)
         reel.add(im)
 
-    # 6) 准星从洞口移到最右边那个小人身上，收紧
-    tx, ty = 138, GROUND - 13
+    # 8) 准星从洞口挪到中间那个小人身上，收紧
+    ty = GROUND - 12
     for i in range(7):
         t = i / 6.0
-        cx = int(round(HCX + (tx - HCX) * t))
+        cx = int(round(HCX + (FOCUS - HCX) * t))
         cy = int(round(BELLY + (ty - BELLY) * t))
-        r = int(round(17 - 5 * t))
+        r = int(round(17 - 6 * t))
         im, d = frame()
         horse(d, ox=HX, hole=24)
+        laocoon(d, LX, GROUND, pose="watch")
         for px in lands:
             soldier(d, px, GROUND - 1)
         brackets(d, cx, cy, r, MINT, arm=4)
         d.point((cx, cy), fill=BODY)
         reel.add(im)
 
-    def scene(rows):
+    def stage(rows, guard=False):
         im, d = frame()
         horse(d, ox=HX, hole=24)
         for px in lands:
             soldier(d, px, GROUND - 1)
-        brackets(d, tx, ty, 12, MINT, arm=4)
-        d.point((tx, ty), fill=BODY)
-        rect(d, tx, 44, 1, 11, MINT)         # 引线
-        tipbox(d, 117, 24, rows)
+        brackets(d, FOCUS, ty, 11, MINT, arm=4)
+        racebox(d, 6, 12, rows)
+        laocoon(d, LX + (10 if guard else 0), GROUND, pose="guard" if guard else "watch")
         return im
 
-    # 7) 旁边的信息框逐行打出来
+    # 9) 信息框逐行打出来：不报 PID，只报「这些人是希腊人」
     for rows in (1, 2, 3):
-        reel.add(scene(rows))
+        reel.add(stage(rows))
 
-    # 8) 停住
-    for _ in range(14):
-        reel.add(scene(3))
+    # 10) 拉奥孔看见了，退半步，抬手戒备
+    for i in range(4):
+        x = LX + (i + 1) * 3
+        im, d = frame()
+        horse(d, ox=HX, hole=24)
+        for px in lands:
+            soldier(d, px, GROUND - 1)
+        brackets(d, FOCUS, ty, 11, MINT, arm=4)
+        racebox(d, 6, 12, 3)
+        laocoon(d, x, GROUND, pose="guard" if i > 0 else "watch")
+        reel.add(im)
+
+    # 11) 停住
+    for _ in range(12):
+        reel.add(stage(3, guard=True))
 
     return reel
 
@@ -759,8 +954,9 @@ def main():
     save(b, os.path.join(OUT, "detect.gif"))
 
     if "--sheet" in sys.argv:
+        n = len(a.frames)
         sheet(a, os.path.join(TMP, "sheet_origin.png"),
-              [2, 12, 17, 22, 30, 40, 48, 58, len(a.frames) - 1])
+              [2, 12, 20, 26, 31, 36, 44, 52, 62, 74, n - 1])
         sheet(b, os.path.join(TMP, "sheet_detect.png"),
               [3, 7, 20, 30, 40, 50, 58, 62, len(b.frames) - 1])
 

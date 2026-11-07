@@ -8,7 +8,7 @@
 > Esta herramienta hace lo mismo: **pincha una ventana y escucha lo que esconde.**
 
 <p align="center">
-  <img src="img/laocoon.gif" width="640" alt="Una lanza atraviesa el vientre del caballo de madera; de la brecha saltan guerreros armados y la mira fija a uno de ellos con un cuadro de información al lado">
+  <img src="img/laocoon.gif" width="640" alt="Laocoonte llega desde el lado de la cabeza del caballo y clava su lanza en el vientre; de la brecha saltan guerreros armados, una etiqueta los identifica y él retrocede con la lanza en alto">
 </p>
 
 Ves una ventana que no reconoces — puede que algo indeseable. Pulsa `F2`, lleva la mira encima y haz clic. Sacará todo lo que se pueda extraer de esa ventana y del proceso que la sostiene.

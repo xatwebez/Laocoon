@@ -8,7 +8,7 @@
 > Cet outil fait exactement la même chose : **pique une fenêtre, écoute ce qu'elle cache.**
 
 <p align="center">
-  <img src="img/laocoon.gif" width="640" alt="Une lance transperce le ventre du cheval de bois ; des guerriers armés en jaillissent, et le réticule en verrouille un, avec une info-bulle à côté">
+  <img src="img/laocoon.gif" width="640" alt="Laocoon arrive du côté de la tête du cheval et enfonce sa lance dans son ventre ; des guerriers armés jaillissent de la brèche, une étiquette les nomme, et il recule, lance levée">
 </p>
 
 Vous voyez une fenêtre que vous ne reconnaissez pas — peut-être quelque chose de douteux. Appuyez sur `F2`, amenez le réticule dessus, cliquez. Il déroule tout ce qu'on peut extraire de cette fenêtre et du processus qui la porte.

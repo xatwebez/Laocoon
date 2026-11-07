@@ -8,7 +8,7 @@
 > Esta ferramenta faz o mesmo: **espetar uma janela e ouvir o que ela esconde.**
 
 <p align="center">
-  <img src="img/laocoon.gif" width="640" alt="Uma lança atravessa o ventre do cavalo de madeira; guerreiros armados saltam pela abertura, e a mira trava um deles com uma caixa de informação ao lado">
+  <img src="img/laocoon.gif" width="640" alt="Laocoonte chega pelo lado da cabeça do cavalo e crava a lança no ventre; guerreiros armados saltam pela abertura, uma etiqueta os identifica e ele recua com a lança erguida">
 </p>
 
 Você vê uma janela que não reconhece — talvez algo indesejado. Pressione `F2`, leve a mira até ela, clique. Ele despeja tudo o que dá para extrair daquela janela e do processo por trás dela.
