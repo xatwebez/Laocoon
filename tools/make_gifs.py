@@ -199,7 +199,7 @@ def big_window(d, x, y, w, h, lines=0, dark=False, dot=False):
 # 比例照真实侧影取：腿短、肚子圆、头长；底下是车架和两个轮子。
 # 坐标是 160x90 逻辑网格上的绝对值，改动时整段平移即可。
 GROUND = 79
-HX = -24            # 整匹马左移，右侧完全让给拉奥孔
+HX = -6             # 整匹马左移，右侧让给拉奥孔；左侧要留出小人的落点
 BELLY = 42          # 矛尖扎进去的高度
 HOLE_CX = 72        # 腹部开口的横向中心
 HCX = HOLE_CX + HX  # 位移之后开口的实际横坐标 = 48
@@ -255,11 +255,16 @@ FAR_LEGS = [[(58, 46), (66, 46), (65, 68), (61, 68)],
 TAIL = [(46, 30), (41, 32), (38, 41), (35, 53), (33, 65), (38, 67),
         (40, 56), (42, 44), (48, 34)]
 
-# 头和脖子是一整块。木马的头是雕出来的：比方比真马更重，也比胶囊体好认
-FRONT = [(72, 36), (86, 9), (94, 4), (102, 2), (110, 3), (116, 7),
-         (123, 12), (129, 16), (128, 20), (123, 21), (117, 23), (109, 23),
-         (103, 25), (98, 27), (94, 34)]
-EARS = [[(95, 6), (97, 0), (101, 5)], [(103, 5), (105, 0), (109, 5)]]
+# 头和脖子是一整块。马头靠四件事认出来，缺一条就会退化成鼠头或鸟头：
+#   ① 枕到鼻端长约体长的三分之一，不能和躯干等高
+#   ② 一条笔直的斜鼻梁，不能是圆弧拱背（拱背是啮齿动物）
+#   ③ 吻端是钝的端面（高约头长三分之一），不是尖嘴
+#   ④ 腮→下颌→下唇有明显折角，喉部再收进去
+#                        颈背        枕   背线          鼻端面      下颌      喉
+FRONT = [(74, 32), (85, 10), (92, 8), (98, 9), (106, 15), (109, 17),
+         (109, 20), (108, 23), (104, 25), (98, 27), (94, 30)]
+# 两耳基部相连、只在尖部岔开一道浅 V；分开画就成了兔耳，缝太深就成鹿角
+EARS = [[(85, 12), (82, 4), (90, 8), (93, 3), (97, 12)]]
 NEAR_LEGS = [[(47, 46), (55, 46), (54, 69), (50, 69)],
              [(86, 46), (94, 46), (93, 69), (89, 69)]]
 DECK = (44, 69, 55, 3)              # 车架：x, y, w, h
@@ -281,13 +286,15 @@ def horse(d, ox=0, oy=0, hole=0, hole_h=12):
     _blit(d, _mask([("p", _mv(p, ox, oy)) for p in FAR_LEGS]), body=DIM, edge=EDGE, under=EDGE)
     _blit(d, _mask([("p", _mv(TAIL, ox, oy))]), body=STEEL, edge=EDGE, under=DIM)
 
+    # 头颈这块多边形有顶点落在整数扫描线上，PIL 会把同一个顶点算两次、
+    # 交点数变奇数，腹线下沿就会漏出一条背景缝。整体加 0.3 像素避开扫描线。
     near = [
         ("e", (44 + ox, 26 + oy, 96 + ox, 52 + oy)),     # 躯干
         ("e", (40 + ox, 23 + oy, 68 + ox, 52 + oy)),     # 臀
-        ("e", (80 + ox, 27 + oy, 98 + ox, 52 + oy)),     # 前胸
-        ("p", _mv(FRONT, ox, oy)),
+        ("e", (80 + ox, 27 + oy, 97 + ox, 52 + oy)),     # 前胸
+        ("p", [(x + ox + 0.3, y + oy + 0.3) for x, y in FRONT]),
     ]
-    near += [("p", _mv(e, ox, oy)) for e in EARS]
+    near += [("p", [(x + ox + 0.3, y + oy + 0.3) for x, y in e]) for e in EARS]
     near += [("p", _mv(l, ox, oy)) for l in NEAR_LEGS]
 
     m = _mask(near)
@@ -324,11 +331,14 @@ def horse(d, ox=0, oy=0, hole=0, hole_h=12):
     def on(x, y):
         return 0 <= x < W and 0 <= y < H and px[x, y] > 0
 
-    # 鬃毛：直接沿脖子背缘（左上方那一条）压暗一档，永远贴着真实轮廓
-    for y in range(4 + oy, 33 + oy):
-        for x in range(74 + ox, 100 + ox):
+    # 鬃毛：直接沿脖子背缘（左上方那一条）压暗，永远贴着真实轮廓。
+    # 只扫颈部，别把额头也压暗了 —— 额头暗下去就成鼠脸了
+    for y in range(11 + oy, 31 + oy):
+        for x in range(76 + ox, 95 + ox):
             if on(x, y) and on(x - 1, y) and not on(x - 2, y):
                 d.point((x, y), fill=DIM)
+                if on(x + 1, y):
+                    d.point((x + 1, y), fill=DIM)
 
     # 木板拼缝：横着拼的板子，只在马身内部画，出头的地方不画
     for sy in (30 + oy, 38 + oy, 47 + oy):
@@ -336,9 +346,16 @@ def horse(d, ox=0, oy=0, hole=0, hole_h=12):
             if on(x, sy) and on(x, sy - 1) and on(x, sy + 1) and on(x - 1, sy) and on(x + 1, sy):
                 d.point((x, sy), fill=EDGE)
 
-    # 眼、鼻孔
-    rect(d, 111 + ox, 8 + oy, 2, 2, EDGE)
-    rect(d, 126 + ox, 16 + oy, 1, 1, EDGE)
+    # 下颌线：腮到下唇压暗一档，把「脸」和「脖子」分开。先画它，
+    # 免得后面嘴角和鼻孔被这层阴影吃掉
+    for x in range(96 + ox, 104 + ox):
+        for y in range(22 + oy, 27 + oy):
+            if on(x, y) and not on(x, y + 1):
+                d.point((x, y), fill=DIM)
+
+    # 脸：眼在腮前上方、鼻孔开在钝吻端上、嘴角从吻端下沿往后切
+    rect(d, 98 + ox, 15 + oy, 2, 2, EDGE)
+    rect(d, 105 + ox, 19 + oy, 1, 2, EDGE)
 
     if hole > 0:
         # 洞口一圈是刚劈开的木断面：亮一档，形状跟着缺口走
@@ -556,7 +573,7 @@ def gif_origin():
         return im, d
 
     LX = 130                 # 拉奥孔的站位：马头这一侧，也就是守方
-    lands = (40, 26, 12)     # 三个小人依次往左落，最左那个紧贴画框
+    lands = (38, 24, 10)     # 三个小人依次往左落，间距要大于准星的直径，否则框住两个人
     FOCUS = lands[1]         # 准星最后锁中间那个，正好在信息框正下方
 
     # 1) 木马连轮子停在城外
@@ -646,7 +663,7 @@ def gif_origin():
         reel.add(im)
 
     # 8) 准星从洞口挪到中间那个小人身上，收紧
-    ty = GROUND - 12
+    ty = GROUND - 13
     for i in range(7):
         t = i / 6.0
         cx = int(round(HCX + (FOCUS - HCX) * t))
@@ -666,7 +683,7 @@ def gif_origin():
         horse(d, ox=HX, hole=24)
         for px in lands:
             soldier(d, px, GROUND - 1)
-        brackets(d, FOCUS, ty, 11, MINT, arm=4)
+        brackets(d, FOCUS, ty, 7, MINT, arm=3)
         racebox(d, 6, 12, rows)
         laocoon(d, LX + (10 if guard else 0), GROUND, pose="guard" if guard else "watch")
         return im
@@ -682,7 +699,7 @@ def gif_origin():
         horse(d, ox=HX, hole=24)
         for px in lands:
             soldier(d, px, GROUND - 1)
-        brackets(d, FOCUS, ty, 11, MINT, arm=4)
+        brackets(d, FOCUS, ty, 7, MINT, arm=3)
         racebox(d, 6, 12, 3)
         laocoon(d, x, GROUND, pose="guard" if i > 0 else "watch")
         reel.add(im)
