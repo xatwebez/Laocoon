@@ -7,6 +7,10 @@
 >
 > Dieses Werkzeug tut dasselbe: **stich in ein Fenster und höre, was darin verborgen ist.**
 
+<p align="center">
+  <img src="img/laocoon.gif" width="640" alt="Ein hölzernes Pferd auf Rädern wird vom Fadenkreuz in den Bauch getroffen; darin erscheinen drei Fenster, eines rot markiert">
+</p>
+
 Da ist ein Fenster, das Sie nicht kennen — vielleicht etwas Unangenehmes. `F2` drücken, Fadenkreuz darüberziehen, klicken. Es legt alles offen, was sich über dieses Fenster und den dahinterstehenden Prozess herausfinden lässt.
 
 - Einzelne Datei `Laocoon.exe`, etwa **208 KB**
@@ -20,6 +24,10 @@ Da ist ein Fenster, das Sie nicht kennen — vielleicht etwas Unangenehmes. `F2`
 ---
 
 ## Bedienung
+
+<p align="center">
+  <img src="img/detect.gif" width="640" alt="Nach F2 rastet das Fadenkreuz auf einem Fenster ein; von unten fährt ein Bericht hoch, und eines der drei Fenster des Prozesses ist versteckt">
+</p>
 
 1. Doppelklick auf `Laocoon.exe` (für die vollständigsten Daten: **Rechtsklick → Als Administrator ausführen**)
 2. `F2` drücken — der Zeiger wird zum Fadenkreuz
@@ -126,6 +134,7 @@ Das Ergebnis liegt in `src\bin\Release\net48\Laocoon.exe`.
 - `src/Laocoon.cs` — das Programm, rund 2225 Zeilen, ausschließlich Win32-P/Invoke, kein einziges NuGet-Paket
 - `src/Lang.cs` — Sprachkern (Enum, Erkennung, Schrift, Breite, Nachschlagen, Rückfall) und alle zwölf Tabellen in einer Datei, rund 2250 Zeilen
 - `src/Laocoon.ico` — das Pixel-Icon selbst (8 Größen, 16–256), erzeugt aus einem 16×16-Raster von `tools/make_icon.py`
+- `docs/img/*.gif` — die beiden Pixel-Animationen dieser README, Bild für Bild von `tools/make_gifs.py` gezeichnet (8 Farben, 160×90-Raster, ganzzahlige Skalierung)
 
 Jede Tabelle hat 124 Schlüssel, alle in die exe kompiliert. Keine `.resources`, keine Satellite Assemblies — auf jedem Win10/11-Rechner läuft es sofort, ohne „Sprachpaket fehlt, Rückfall auf Englisch“.
 

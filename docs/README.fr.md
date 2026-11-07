@@ -7,6 +7,10 @@
 >
 > Cet outil fait exactement la même chose : **pique une fenêtre, écoute ce qu'elle cache.**
 
+<p align="center">
+  <img src="img/laocoon.gif" width="640" alt="Un cheval de bois à roues est frappé au ventre par le réticule ; trois fenêtres apparaissent à l'intérieur, dont une marquée en rouge">
+</p>
+
 Vous voyez une fenêtre que vous ne reconnaissez pas — peut-être quelque chose de douteux. Appuyez sur `F2`, amenez le réticule dessus, cliquez. Il déroule tout ce qu'on peut extraire de cette fenêtre et du processus qui la porte.
 
 - Un seul fichier `Laocoon.exe`, environ **208 Ko**
@@ -20,6 +24,10 @@ Vous voyez une fenêtre que vous ne reconnaissez pas — peut-être quelque chos
 ---
 
 ## Utilisation
+
+<p align="center">
+  <img src="img/detect.gif" width="640" alt="Après F2, le réticule verrouille une fenêtre ; un rapport monte du bas et l'une des trois fenêtres du processus est cachée">
+</p>
 
 1. Double-cliquez sur `Laocoon.exe` (pour le maximum d'informations : **clic droit → Exécuter en tant qu'administrateur**)
 2. Appuyez sur `F2`, le curseur devient un réticule
@@ -126,6 +134,7 @@ Le résultat est `src\bin\Release\net48\Laocoon.exe`.
 - `src/Laocoon.cs` — le programme, environ 2 225 lignes, uniquement du P/Invoke Win32, aucun paquet NuGet
 - `src/Lang.cs` — cœur des langues (énumération, détection, police, largeur, recherche, repli) et les douze tables dans un seul fichier, environ 2 250 lignes
 - `src/Laocoon.ico` — l'icône pixel art elle-même (8 tailles, 16 à 256), générée depuis une grille 16×16 par `tools/make_icon.py`
+- `docs/img/*.gif` — les deux animations pixel de ce README, dessinées image par image par `tools/make_gifs.py` (8 couleurs, grille 160×90, agrandissement entier)
 
 Chaque table compte 124 clés, toutes compilées dans l'exe. Pas de `.resources`, pas de satellite assembly : sur n'importe quelle machine Win10/11 tout fonctionne sans « pack de langue manquant, repli sur l'anglais ».
 

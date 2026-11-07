@@ -7,6 +7,10 @@
 >
 > 这个工具做的是同一件事：**戳一下窗口，听里面藏着什么。**
 
+<p align="center">
+  <img src="docs/img/laocoon.gif" width="640" alt="一匹带轮子的木马被准星戳中腹部，裂口里露出三个窗口，其中一个标着红点">
+</p>
+
 看到一个不认识的（可能是流氓软件）窗口，按一下 `F2`，把准星拖上去，左键点击，它会把那个窗口和它背后那个进程能扒出来的信息全部列出来。
 
 - 单文件 `Laocoon.exe`，约 **208 KB**
@@ -20,6 +24,10 @@
 ---
 
 ## 用法
+
+<p align="center">
+  <img src="docs/img/detect.gif" width="640" alt="按下 F2 后准星套住窗口，底部升起报告，同进程的三个窗口里有一个是隐藏的">
+</p>
 
 1. 双击 `Laocoon.exe`（想拿到最全的信息，**右键 → 以管理员身份运行**）
 2. 按 `F2`，鼠标变成十字准星
@@ -136,6 +144,7 @@ dotnet build src\Laocoon.csproj -c Release
 - `src/Laocoon.cs` —— 主程序，约 2225 行，全部 Win32 P/Invoke，没有任何 NuGet 包
 - `src/Lang.cs` —— 语言核心（枚举、识别、字体、宽度、取词与回落）和 12 张文案表都在这一份文件里，约 2250 行
 - `src/Laocoon.ico` —— 像素图标本身（16~256 共 8 个尺寸），由 `tools/make_icon.py` 用 16 格母版生成
+- `docs/img/*.gif` —— README 里的两段像素动画，由 `tools/make_gifs.py` 逐帧程序化生成（8 色、160×90 网格、整数倍放大）
 
 每张表 124 个键，全部编译进 exe，不生成 `.resources`、不生成 satellite assembly，
 所以拷到任何一台 Win10/11 上都能直接用，不会出现“缺语言包退回英文”。

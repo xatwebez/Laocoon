@@ -7,6 +7,10 @@
 >
 > Questo strumento fa la stessa cosa: **punge una finestra e ascolta cosa nasconde.**
 
+<p align="center">
+  <img src="img/laocoon.gif" width="640" alt="Un cavallo di legno su ruote viene colpito al ventre dal mirino; dentro compaiono tre finestre, una contrassegnata in rosso">
+</p>
+
 Vedi una finestra che non riconosci — magari qualcosa di indesiderato. Premi `F2`, porta il mirino sopra, clicca. Tira fuori tutto ciò che si può estrarre da quella finestra e dal processo che la sostiene.
 
 - Un solo file `Laocoon.exe`, circa **208 KB**
@@ -20,6 +24,10 @@ Vedi una finestra che non riconosci — magari qualcosa di indesiderato. Premi `
 ---
 
 ## Uso
+
+<p align="center">
+  <img src="img/detect.gif" width="640" alt="Dopo F2 il mirino aggancia una finestra; dal basso sale un rapporto e una delle tre finestre del processo è nascosta">
+</p>
 
 1. Doppio clic su `Laocoon.exe` (per il massimo dei dettagli: **clic destro → Esegui come amministratore**)
 2. Premi `F2`: il cursore diventa un mirino
@@ -126,6 +134,7 @@ Il risultato è in `src\bin\Release\net48\Laocoon.exe`.
 - `src/Laocoon.cs` — il programma, circa 2225 righe, solo P/Invoke Win32, nessun pacchetto NuGet
 - `src/Lang.cs` — nucleo delle lingue (enumerazione, rilevamento, font, larghezza, ricerca, ripiego) e le dodici tabelle in un unico file, circa 2250 righe
 - `src/Laocoon.ico` — l'icona pixel art stessa (8 dimensioni, da 16 a 256), generata da una griglia 16×16 con `tools/make_icon.py`
+- `docs/img/*.gif` — le due animazioni pixel di questo README, disegnate fotogramma per fotogramma da `tools/make_gifs.py` (8 colori, griglia 160×90, ingrandimento intero)
 
 Ogni tabella ha 124 chiavi, tutte compilate nell'exe. Niente `.resources`, niente satellite assembly: su qualsiasi macchina Win10/11 funziona subito, senza «pacchetto lingua mancante, ripiego sull'inglese».
 

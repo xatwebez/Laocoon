@@ -7,6 +7,10 @@
 >
 > This tool does the same thing: **poke a window, and hear what it is hiding.**
 
+<p align="center">
+  <img src="img/laocoon.gif" width="640" alt="A wheeled wooden horse is struck in the belly by the crosshair; three windows show up inside, one of them marked in red">
+</p>
+
 You see a window you don't recognise — possibly something nasty. Press `F2`, drag the crosshair onto it, click. It lays out everything it can dig up about that window and the process behind it.
 
 - Single file `Laocoon.exe`, about **208 KB**
@@ -20,6 +24,10 @@ You see a window you don't recognise — possibly something nasty. Press `F2`, d
 ---
 
 ## Usage
+
+<p align="center">
+  <img src="img/detect.gif" width="640" alt="After F2 the crosshair locks onto a window; a report rises from the bottom, and one of the three windows of that process is hidden">
+</p>
 
 1. Double-click `Laocoon.exe` (for the fullest results: **right-click → Run as administrator**)
 2. Press `F2` — the cursor turns into a crosshair
@@ -126,6 +134,7 @@ The output is `src\bin\Release\net48\Laocoon.exe`.
 - `src/Laocoon.cs` — the program, ~2,225 lines, all Win32 P/Invoke, no NuGet packages at all
 - `src/Lang.cs` — language core (enum, detection, font, width, lookup, fallback) and all twelve phrase tables in one file, about 2,250 lines
 - `src/Laocoon.ico` — the pixel icon itself (8 sizes, 16–256), generated from a 16-cell master grid by `tools/make_icon.py`
+- `docs/img/*.gif` — the two pixel animations in this README, drawn frame by frame by `tools/make_gifs.py` (8 colours, 160×90 grid, integer scaling)
 
 Each table has 124 keys, all compiled into the exe. No `.resources`, no satellite assemblies — so it runs on any Win10/11 machine without ever falling back to English for a "missing language pack".
 
