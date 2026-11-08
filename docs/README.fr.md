@@ -28,9 +28,10 @@ Le rapport est une liste de faits, pas un jugement. Regardez bien, puis agissez 
 
 Vous voyez une fenêtre que vous ne reconnaissez pas — peut-être quelque chose de douteux. Appuyez sur `F2`, amenez le réticule dessus, cliquez. Il déroule tout ce qu'on peut extraire de cette fenêtre et du processus qui la porte.
 
-- Un seul fichier `Laocoon.exe`, environ **346 Ko**
+- Un seul fichier `Laocoon.exe`, environ **384 Ko**
 - Aucune dépendance tierce — uniquement le .NET Framework 4.x fourni avec Windows (Win10 / Win11, rien à installer)
-- Pas de réseau, pas d'envoi, pas d'écriture dans le registre, aucun fichier de configuration, pas d'agent en arrière-plan (on décompresse, on lance — rien ne reste sur le disque)
+- Pas d'écriture dans le registre, aucun fichier de configuration, pas d'agent en arrière-plan (on décompresse, on lance — rien ne reste sur le disque)
+- Seule sortie réseau : une vérification de version au lancement, qui lit un manifeste public sur GitHub et n'envoie rien sur la machine ; `--noupdate` la coupe
 - Douze langues intégrées : **中文 / English / Русский / Français / Español / العربية / Deutsch / Português / 日本語 / 한국어 / हिन्दी / Italiano**
 
 > Le nom de fichier reste `Laocoon.exe` en ASCII ; le titre de la fenêtre garde le tréma — `Laocoön`.
@@ -108,7 +109,23 @@ Arabe, hindi, japonais et coréen utilisent chacun la police fournie par Windows
 | Arbre des contrôles | Tout l'arbre des contrôles enfants de la fenêtre visée : indentation, taille, ID, texte |
 | Indices de suspicion | Heuristiques : dans Temp / Téléchargements / AppData, non signé, sans nom de société, au premier plan, nombre de fenêtres masquées, fichier créé depuis moins de 7 jours, etc. (**des indices, pas un verdict**) |
 
-Le rapport entier est du texte brut : colonnes alignées, sections séparées — tout sélectionner pour copier, ou « Enregistrer le rapport » pour écrire un `.txt` en UTF-8. Pour vérifier un fichier plus loin, copiez le `sha256` vers le service de votre choix — cet outil ne fait que capturer en local, sans connexion ni envoi.
+Le rapport entier est du texte brut : colonnes alignées, sections séparées — tout sélectionner pour copier, ou « Enregistrer le rapport » pour écrire un `.txt` en UTF-8. Pour vérifier un fichier plus loin, copiez le `sha256` vers le service de votre choix — cet outil ne fait que capturer en local et n'envoie rien (seule connexion : la vérification de version, voir « Mise à jour automatique »).
+
+## Mise à jour automatique
+
+Personne ne devrait avoir à chercher la page de téléchargement d'une nouvelle version. Quelques secondes après le lancement, le programme demande une fois à GitHub s'il existe mieux que `1.6.0`.
+
+- Il lit un unique manifeste texte public (`releases/latest/download/latest.txt`) : version, URL de téléchargement, SHA-256, taille, date, une ligne de notes
+- Il n'envoie **rien** sur la machine : pas d'identifiant, pas de statistiques, pas de « qui utilise quoi »
+- Une nouvelle version **n'ouvre aucune fenêtre** : un bouton « Mettre à jour x.y.z » apparaît dans la barre et la barre d'état affiche une phrase. On l'ignore, et il ne revient pas à la charge
+- Le téléchargement ne démarre qu'au clic : barre de progression avec l'étape en cours, et le SHA-256 est vérifié sur place — en cas d'écart le fichier est supprimé plutôt que d'installer un demi-programme
+- Une fois vérifié, il écrit un petit script de remplacement, quitte, échange l'exe et le relance. Personne n'a besoin de surveiller
+- Si l'échange échoue (antivirus qui tient encore le fichier, dossier en lecture seule), le script relance l'ancienne version et ouvre la page de téléchargement — jamais devant un programme disparu
+- Une vérification ratée (hors ligne, bloquée, proxy d'entreprise) est ignorée en silence, le reste est inchangé
+- `--noupdate` supprime la vérification ; `--feed=` la pointe vers un miroir interne ou un fichier local
+
+Le manifeste et l'exe sortent du même passage de CI, le hachage y est calculé : impossible que le manifeste décrive un fichier et que le téléchargement en fournisse un autre.
+
 
 ## Limites connues
 
@@ -122,6 +139,7 @@ Le rapport entier est du texte brut : colonnes alignées, sections séparées �
 
 ## Journal des versions
 
+- **1.6.0** — Mise à jour automatique : au lancement, comparaison en arrière-plan avec le manifeste GitHub ; si une version plus récente existe, un bouton « Mettre à jour » apparaît — un clic télécharge, vérifie le SHA-256, remplace l'exe et redémarre. Une vérification ratée passe en silence, `--noupdate` la désactive
 - **1.5.0** — Nouvelle fenêtre « À propos » (`F1` ou le dernier bouton de la barre) : deux animations pixel, l'une sur l'origine du nom, l'autre sur ce que fait l'outil ; elles sont incluses dans l'exe, rien à télécharger
 - **1.4.4** — Correction d'un plantage occasionnel lors d'un changement de langue rapide en maintenant une flèche : la recréation des handles de fenêtre n'a plus lieu dans le traitement des messages de la liste, et le miroir RTL attend le relâchement des touches
 - **1.4.3** — Fin de `Laocoon.ini` : la langue suit le système, un changement manuel ne vaut que pour la session, et le programme ne laisse aucun fichier
@@ -149,10 +167,11 @@ Le résultat est `src\bin\Release\net48\Laocoon.exe`.
 
 - `src/Laocoon.cs` — le programme, environ 2 225 lignes, uniquement du P/Invoke Win32, aucun paquet NuGet
 - `src/Lang.cs` — cœur des langues (énumération, détection, police, largeur, recherche, repli) et les douze tables dans un seul fichier, environ 2 250 lignes
+- `src/Update.cs` — le module de mise à jour : comparaison de versions, lecture du manifeste, téléchargement avec vérification SHA-256, script d'auto-remplacement et fenêtre de mise à jour, environ 1195 lignes
 - `src/Laocoon.ico` — l'icône pixel art elle-même (8 tailles, 16 à 256), générée depuis une grille 16×16 par `tools/make_icon.py`
 - `docs/img/*.gif` — les deux animations pixel de ce README, dessinées image par image par `tools/make_gifs.py` (8 couleurs, grille 160×90, agrandissement entier)
 
-Chaque table compte 124 clés, toutes compilées dans l'exe. Pas de `.resources`, pas de satellite assembly : sur n'importe quelle machine Win10/11 tout fonctionne sans « pack de langue manquant, repli sur l'anglais ».
+Chaque table compte 157 clés, toutes compilées dans l'exe. Pas de `.resources`, pas de satellite assembly : sur n'importe quelle machine Win10/11 tout fonctionne sans « pack de langue manquant, repli sur l'anglais ».
 
 Points d'entrée principaux :
 - `Probe.HitTest` — parcourt lui-même les fenêtres de premier niveau dans l'ordre z (pas `WindowFromPoint`, pour ne jamais toucher sa propre surcouche)
@@ -176,6 +195,10 @@ Laocoon.exe --uishot out.png --lang=ar            rendre l'interface en PNG
 Laocoon.exe --uishot out.png --lang=ar --welcome  page d'accueil seulement
 Laocoon.exe --uishot out.png --lang=ar --screen   capture d'écran (DrawToBitmap simule une sélection en RTL)
 Laocoon.exe --aboutshot out.png [--lang=xx]  rendre la fenêtre « À propos » (les deux animations avancent de quelques images)
+Laocoon.exe --updatecheck [url|chemin]  exécuter la vraie vérification et afficher la comparaison
+Laocoon.exe --updatefetch url out.exe  télécharger et vérifier, dire si le sha256 correspond
+Laocoon.exe --updateplan new.exe old.exe [page]  écrire seulement le script de remplacement, pour relire chemins et échappements
+Laocoon.exe --updateshot out.png [--lang=xx] [--state=dl|fail]  rendre la fenêtre de mise à jour
 ```
 
 Combiné à `--lang=`, `--uishot` rend les douze interfaces d'un coup pour un contrôle visuel.

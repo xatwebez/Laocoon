@@ -28,9 +28,10 @@ The report is a list of facts, not a sentence. Look carefully, then act carefull
 
 You see a window you don't recognise — possibly something nasty. Press `F2`, drag the crosshair onto it, click. It lays out everything it can dig up about that window and the process behind it.
 
-- Single file `Laocoon.exe`, about **346 KB**
+- Single file `Laocoon.exe`, about **384 KB**
 - Zero third-party dependencies — only the .NET Framework 4.x that ships with Windows (Win10 / Win11, nothing to install)
-- No network, no upload, no registry writes, no config files, no background agent (unzip, run — and nothing is left on disk)
+- No registry writes, no config files, no background agent (unzip, run — and nothing is left on disk)
+- The only network activity is one version check at startup: it reads a public manifest on GitHub and sends nothing about your machine; `--noupdate` turns it off
 - Twelve languages built in: **中文 / English / Русский / Français / Español / العربية / Deutsch / Português / 日本語 / 한국어 / हिन्दी / Italiano**
 
 > The file is ASCII `Laocoon.exe`; the window title keeps the diaeresis — `Laocoön`.
@@ -108,7 +109,23 @@ Arabic, Hindi, Japanese and Korean each use the font Windows ships for them (Seg
 | Child tree | The whole child control tree of the target window, with indentation, size, control ID and text |
 | Suspicion hints | Heuristics: lives in Temp / Downloads / AppData, unsigned, no company name, topmost, number of hidden windows, file created within 7 days, etc. (**hints only, not a verdict**) |
 
-The whole report is plain text: columns line up, sections are separated, so you can select it all and copy, or use "Save report" to write a UTF-8 `.txt`. To check a file further, copy the `sha256` into any service you trust — this tool only captures locally, never connects or uploads.
+The whole report is plain text: columns line up, sections are separated, so you can select it all and copy, or use "Save report" to write a UTF-8 `.txt`. To check a file further, copy the `sha256` into any service you trust — this tool only captures locally and never uploads anything (the sole connection is the version check described above).
+
+## Automatic updates
+
+Nobody should have to hunt down a download page for a new build. A few seconds after launch, the program asks GitHub once whether anything newer than `1.6.0` exists.
+
+- It reads one public plain-text manifest (`releases/latest/download/latest.txt`): version, download URL, SHA-256, size, date, one line of release notes
+- It sends **nothing** about your machine — no device ID, no telemetry, no "who is using this"
+- A new version does **not** pop a dialog: an "Update x.y.z" button appears in the toolbar and the status bar says one line. Ignore it and it will not nag again
+- Downloading starts only when you click that button: progress bar with a phase line, and the SHA-256 is verified on the spot — a mismatch deletes the file instead of installing half of it
+- Once verified, it writes a small replace script, quits, swaps the exe and starts it again. Nobody has to watch it happen
+- If the swap fails (antivirus still holding the file, read-only folder), the script brings the old build back up and opens the download page — you never end up staring at a program that vanished
+- A failed check (offline, blocked, corporate proxy) is skipped silently; nothing else changes
+- `--noupdate` skips the check entirely; `--feed=` points it at an internal mirror or a local file
+
+The manifest and the exe come out of the same CI run and the hash is computed there, so there is no gap where the manifest describes one file and the download delivers another.
+
 
 ## Known limitations
 
@@ -122,6 +139,7 @@ The whole report is plain text: columns line up, sections are separated, so you 
 
 ## Changelog
 
+- **1.6.0** — Automatic updates: after launch it checks the manifest on GitHub in the background; when a newer build exists an "Update" button appears in the toolbar, and clicking it downloads, verifies SHA-256, then swaps the exe and restarts. Failed checks pass silently, `--noupdate` turns it off
 - **1.5.0** — New About window (`F1` or the last toolbar button): two pixel animations, one on where the name comes from and one on what the tool does; both are embedded in the exe, nothing extra to download
 - **1.4.4** — Fixed an occasional crash when holding an arrow key to switch languages fast: the window-handle rebuild no longer happens inside the picker's own message handling, and the RTL flip waits until the keys are released
 - **1.4.3** — No more `Laocoon.ini`: the language follows the system, a manual switch lasts for the current run only, and the program leaves no file on disk
@@ -147,12 +165,13 @@ The output is `src\bin\Release\net48\Laocoon.exe`.
 
 ## Source layout
 
-- `src/Laocoon.cs` — the program, ~2,225 lines, all Win32 P/Invoke, no NuGet packages at all
-- `src/Lang.cs` — language core (enum, detection, font, width, lookup, fallback) and all twelve phrase tables in one file, about 2,250 lines
+- `src/Laocoon.cs` — the program, ~3,191 lines, all Win32 P/Invoke, no NuGet packages at all
+- `src/Lang.cs` — language core (enum, detection, font, width, lookup, fallback) and all twelve phrase tables in one file, about 2,611 lines
+- `src/Update.cs` — the update module: version comparison, manifest parsing, download with SHA-256 verification, the self-replace script and the update window, about 1,195 lines
 - `src/Laocoon.ico` — the pixel icon itself (8 sizes, 16–256), generated from a 16-cell master grid by `tools/make_icon.py`
 - `docs/img/*.gif` — the two pixel animations in this README, drawn frame by frame by `tools/make_gifs.py` (8 colours, 160×90 grid, integer scaling)
 
-Each table has 124 keys, all compiled into the exe. No `.resources`, no satellite assemblies — so it runs on any Win10/11 machine without ever falling back to English for a "missing language pack".
+Each table has 157 keys, all compiled into the exe. No `.resources`, no satellite assemblies — so it runs on any Win10/11 machine without ever falling back to English for a "missing language pack".
 
 Main entry points:
 - `Probe.HitTest` — walks top-level windows in z-order itself for hit testing (not `WindowFromPoint`, so it never hits its own overlay)
@@ -176,6 +195,10 @@ Laocoon.exe --uishot out.png --lang=ar            render the UI to a PNG
 Laocoon.exe --uishot out.png --lang=ar --welcome  render the welcome page only
 Laocoon.exe --uishot out.png --lang=ar --screen   grab the screen instead (DrawToBitmap fakes a selection in RTL boxes)
 Laocoon.exe --aboutshot out.png [--lang=xx]  render the About window (both animations run a few frames)
+Laocoon.exe --updatecheck [url|path]  run the real check once and print the comparison
+Laocoon.exe --updatefetch url out.exe  download and verify; print whether sha256 matches
+Laocoon.exe --updateplan new.exe old.exe [page]  write the replace script only, to inspect paths and quoting
+Laocoon.exe --updateshot out.png [--lang=xx] [--state=dl|fail]  render the update window
 ```
 
 Combining `--lang=` with `--uishot` renders all twelve UIs in one pass for a visual check.

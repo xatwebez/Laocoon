@@ -1110,8 +1110,14 @@ namespace Laocoon
         readonly Button _bOpenLoc = new Button();
         readonly Button _bClear = new Button();
         readonly Button _bAbout = new Button();
+        readonly Button _bUpdate = new Button();
         readonly Label _lblLang = new Label();
         readonly ComboBox _cboLang = new ComboBox();
+
+        // 更新：后台查一次，有新版本才亮按钮；点了按钮才弹窗，启动时不打断
+        UpdateAgent _updates;
+        UpdateInfo _pendingUpdate;
+        bool _manualCheck;
 
         readonly FrameForm _frame;
         readonly HudForm _hud;
@@ -1218,6 +1224,17 @@ namespace Laocoon
             };
             bar.Controls.Add(_bClear);
 
+            // 有新版本时才会出现，平时不占位置（FlowLayoutPanel 不给隐藏控件留空）
+            _bUpdate.Text = L.T("btn.update");
+            _bUpdate.MinimumSize = new Size(0, 32);
+            StyleButton(_bUpdate, false);
+            _bUpdate.BackColor = Color.FromArgb(13, 138, 116);   // 薄荷：和主色蓝分开，一眼看得见
+            _bUpdate.ForeColor = Color.White;
+            _bUpdate.FlatAppearance.BorderSize = 0;
+            _bUpdate.Visible = false;
+            _bUpdate.Click += delegate { ShowUpdate(); };
+            bar.Controls.Add(_bUpdate);
+
             // 「关于」放最右：不常用，但不能找不到
             _bAbout.Text = L.T("btn.about");
             _bAbout.MinimumSize = new Size(0, 32);
@@ -1281,6 +1298,15 @@ namespace Laocoon
             _txt.Text = Welcome();
             TextBoxDirection(true);
             _ready = true;
+
+            // 启动后延迟一秒多再查：先让窗口画出来、语言加载完，别抢首次绘制的资源。
+            // 查不到也不吭声 —— 断网、被墙、公司网络拦 GitHub，都不是用户需要知道的错误。
+            if (!Program.NoUpdateCheck)
+            {
+                _updates = new UpdateAgent(this, Program.UpdateFeed);
+                _updates.Finished += OnUpdateChecked;
+                _updates.Start(1200);
+            }
         }
 
         // 阿拉伯语界面整体镜像（从右到左），其余语言保持从左到右。
@@ -1333,6 +1359,7 @@ namespace Laocoon
         {
             _dirTimer.Stop();
             _dirTimer.Dispose();
+            if (_updates != null) { _updates.Dispose(); _updates = null; }
             base.OnFormClosed(e);
         }
 
@@ -1356,6 +1383,10 @@ namespace Laocoon
                 _bOpenLoc.Text = L.T("btn.openloc");
                 _bClear.Text = L.T("btn.clear");
                 _bAbout.Text = L.T("btn.about");
+                // 已抓到版本号时按钮上要带版本，别被通用文案盖掉
+                _bUpdate.Text = _pendingUpdate != null
+                    ? L.F("btn.update", _pendingUpdate.VersionText)
+                    : L.T("btn.update");
                 _lblLang.Text = L.T("st.lang");
 
                 // 下拉框跟随当前语言（选中项没变时不会触发事件，不必担心递归）
@@ -1844,7 +1875,78 @@ namespace Laocoon
             if (_aiming) EndAim();
             try
             {
-                using (AboutForm f = new AboutForm()) f.ShowDialog(this);
+                bool check;
+                using (AboutForm f = new AboutForm())
+                {
+                    f.ShowDialog(this);
+                    check = f.CheckRequested;
+                }
+                if (check) ManualUpdateCheck();
+            }
+            catch (Exception ex) { SetStatus(L.F("st.fail", ex.Message)); }
+        }
+
+        // ---------- 更新 ----------
+
+        // 手动检查：已经有结论就直接开窗，别再让用户多等一次网络往返
+        void ManualUpdateCheck()
+        {
+            if (_pendingUpdate != null) { ShowUpdate(); return; }
+            if (_updates == null) return;
+            _manualCheck = true;
+            SetStatus(L.T("upd.checking"));
+            _updates.CheckNow();
+        }
+
+        void OnUpdateChecked(UpdateCheckResult r)
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+
+            if (!r.Ok)
+            {
+                // 自动检查失败一律静默：断网、被墙、旧版本没有清单，都不该弹框打扰
+                if (_manualCheck)
+                {
+                    _manualCheck = false;
+                    MessageBox.Show(this, L.F("upd.checkfail", r.Error), L.T("upd.title"),
+                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+                return;
+            }
+
+            if (!r.HasUpdate)
+            {
+                if (_manualCheck)
+                {
+                    _manualCheck = false;
+                    SetStatus(L.F("upd.latest", BuildInfo.Short));
+                }
+                return;
+            }
+
+            _pendingUpdate = r.Info;
+            _bUpdate.Text = L.F("btn.update", r.Info.VersionText);
+            _bUpdate.Visible = true;
+            SetStatus(L.F("st.updateavail", r.Info.VersionText));
+
+            if (_manualCheck) { _manualCheck = false; ShowUpdate(); }
+        }
+
+        void ShowUpdate()
+        {
+            if (_pendingUpdate == null) return;
+            if (_aiming) EndAim();
+
+            UpdateInfo info = _pendingUpdate;
+            try
+            {
+                using (UpdateForm f = new UpdateForm(info))
+                {
+                    f.ShowDialog(this);
+                    if (!f.Applied) return;      // 用户点了「稍后」
+                }
+                // 替换脚本已经在等这个进程退出了，什么都不用再做，直接走
+                Application.Exit();
             }
             catch (Exception ex) { SetStatus(L.F("st.fail", ex.Message)); }
         }
@@ -2104,6 +2206,10 @@ namespace Laocoon
 
         readonly GifView _origin = new GifView();
         readonly GifView _detect = new GifView();
+        bool _checkRequested;
+
+        /// <summary>用户点了「检查更新」。主窗口在 ShowDialog 返回之后读它。</summary>
+        public bool CheckRequested { get { return _checkRequested; } }
 
         public AboutForm()
         {
@@ -2252,18 +2358,43 @@ namespace Laocoon
             foot.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             foot.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
+            // 两个链接并排：项目主页 + 检查更新。手动检查的入口放这里，
+            // 主窗口工具栏就不必常驻一个平时用不到的按钮。
+            FlowLayoutPanel left = new FlowLayoutPanel();
+            left.AutoSize = true;
+            left.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            left.Dock = DockStyle.Fill;
+            left.FlowDirection = FlowDirection.LeftToRight;
+            left.WrapContents = false;
+            left.Margin = new Padding(0);
+
             LinkLabel link = new LinkLabel();
             link.Text = L.T("about.link");
             link.AutoSize = true;
             link.Anchor = AnchorStyles.Left;
-            link.Margin = new Padding(1, 6, 0, 0);
+            link.Margin = new Padding(1, 6, 16, 0);
             link.LinkColor = Color.FromArgb(37, 99, 235);
             link.LinkClicked += delegate
             {
                 try { Process.Start("https://github.com/xatwebez/Laocoon"); }
                 catch { }
             };
-            foot.Controls.Add(link, 0, 0);
+            left.Controls.Add(link);
+
+            LinkLabel check = new LinkLabel();
+            check.Text = L.T("upd.check");
+            check.AutoSize = true;
+            check.Anchor = AnchorStyles.Left;
+            check.Margin = new Padding(0, 6, 0, 0);
+            check.LinkColor = Color.FromArgb(37, 99, 235);
+            check.LinkClicked += delegate
+            {
+                _checkRequested = true;
+                Close();
+            };
+            left.Controls.Add(check);
+
+            foot.Controls.Add(left, 0, 0);
 
             Button ok = new Button();
             ok.Text = L.T("about.close");
@@ -2332,14 +2463,47 @@ namespace Laocoon
 
     internal static class Program
     {
+        // 更新检查的全局开关。参数在 Main 里一次性解析，主窗口只管读结果。
+        internal static bool NoUpdateCheck;
+        internal static string UpdateFeed;
+
         [STAThread]
         static void Main(string[] args)
         {
             BootstrapLanguage(args);
+            ParseUpdateArgs(args);
 
             if (args.Length > 0 && args[0] == "--i18ncheck")
             {
                 I18nCheck();
+                return;
+            }
+
+            if (args.Length > 0 && args[0] == "--updatecheck")
+            {
+                UpdateCheck(args.Length > 1 ? args[1] : "");
+                return;
+            }
+
+            if (args.Length > 0 && args[0] == "--updateshot")
+            {
+                UpdateShot(args.Length > 1 ? args[1] : "",
+                           Array.IndexOf(args, "--screen") >= 0);
+                return;
+            }
+
+            if (args.Length > 0 && args[0] == "--updateplan")
+            {
+                UpdatePlan(args.Length > 1 ? args[1] : "",
+                           args.Length > 2 ? args[2] : "",
+                           args.Length > 3 ? args[3] : "");
+                return;
+            }
+
+            if (args.Length > 0 && args[0] == "--updatefetch")
+            {
+                UpdateFetch(args.Length > 1 ? args[1] : "",
+                            args.Length > 2 ? args[2] : "");
                 return;
             }
 
@@ -2413,6 +2577,152 @@ namespace Laocoon
 
             foreach (string a in args)
                 if (a.StartsWith("--lang=", StringComparison.OrdinalIgnoreCase)) { L.Set(a.Substring(7)); break; }
+        }
+
+        // 更新相关的启动参数：
+        //   --noupdate      完全不查（自动化、演示、离线环境用）
+        //   --feed=<url|路径>  换一个清单来源（本地测试、内网镜像）
+        static void ParseUpdateArgs(string[] args)
+        {
+            foreach (string a in args)
+            {
+                if (string.Equals(a, "--noupdate", StringComparison.OrdinalIgnoreCase)) NoUpdateCheck = true;
+                else if (a.StartsWith("--feed=", StringComparison.OrdinalIgnoreCase)) UpdateFeed = a.Substring(7);
+            }
+        }
+
+        // 诊断用：走一遍真实的检查链路，把结论摊在控制台上，不启动界面
+        static void UpdateCheck(string feed)
+        {
+            try { Console.OutputEncoding = Encoding.UTF8; } catch { }
+
+            IUpdateChannel ch = UpdateService.ChannelFor(feed);
+            Console.WriteLine("updatecheck: channel = " + ch.Name);
+            Console.WriteLine("updatecheck: local   = " + BuildInfo.Short
+                              + "  (" + BuildInfo.Version + ")");
+
+            UpdateCheckResult r = UpdateService.Check(ch);
+            if (!r.Ok)
+            {
+                Console.WriteLine("updatecheck: error   = " + r.Error);
+                Console.WriteLine("updatecheck: FAILED");
+                Environment.Exit(2);
+                return;
+            }
+            if (!r.HasUpdate)
+            {
+                Console.WriteLine("updatecheck: verdict = up-to-date");
+                Console.WriteLine("updatecheck OK");
+                return;
+            }
+
+            UpdateInfo i = r.Info;
+            Console.WriteLine("updatecheck: remote  = " + i.VersionText + "  (" + i.Ver + ")");
+            Console.WriteLine("updatecheck: url     = " + i.Url);
+            Console.WriteLine("updatecheck: sha256  = " + i.Sha256);
+            Console.WriteLine("updatecheck: size    = " + i.Size);
+            Console.WriteLine("updatecheck: date    = " + i.Date);
+            Console.WriteLine("updatecheck: notes   = " + i.Notes);
+            Console.WriteLine("updatecheck: writable= " + (Installer.CheckWritable(BuildInfo.ExePath) ?? "yes"));
+            Console.WriteLine("updatecheck: verdict = update");
+            Console.WriteLine("updatecheck OK");
+        }
+
+        // 诊断用：生成替换脚本但不启动它，人工核对路径与转义
+        static void UpdatePlan(string newExe, string oldExe, string page)
+        {
+            try { Console.OutputEncoding = Encoding.UTF8; } catch { }
+            if (oldExe.Length == 0) oldExe = BuildInfo.ExePath;
+
+            try
+            {
+                if (newExe.Length == 0) newExe = Installer.StagedExe(UpdateInfo.Sample());
+
+                string path = Installer.WriteScript(newExe, oldExe, page);
+                Console.WriteLine("updateplan: script = " + path);
+                Console.WriteLine("updateplan: ansi   = " + Encoding.Default.WebName
+                                  + "  cp" + Encoding.Default.CodePage);
+                Console.WriteLine("updateplan OK");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("updateplan: error = " + ex.Message);
+                Environment.Exit(2);
+            }
+        }
+
+        // 诊断用：跑一遍完整下载 + 哈希校验，把落地文件也报出来。
+        // 发布后拿它核对 CI 产物，比人肉比对摘要靠谱；故意改坏清单里的 sha256
+        // 也能验证"哈希不符就拒绝安装"这条边界。
+        static void UpdateFetch(string feed, string dest)
+        {
+            try { Console.OutputEncoding = Encoding.UTF8; } catch { }
+
+            IUpdateChannel ch = UpdateService.ChannelFor(feed);
+            Console.WriteLine("updatefetch: channel = " + ch.Name);
+
+            UpdateInfo info;
+            try { info = UpdateService.ReadInfo(ch); }
+            catch (Exception ex) { Console.WriteLine("updatefetch: error = " + ex.Message); Environment.Exit(2); return; }
+
+            if (info == null) { Console.WriteLine("updatefetch: error = manifest incomplete"); Environment.Exit(2); return; }
+            Console.WriteLine("updatefetch: version = " + info.VersionText + "  size = " + info.Size);
+            Console.WriteLine("updatefetch: expect  = " + info.Sha256);
+
+            if (dest.Length == 0) dest = Installer.StagedExe(info);
+            try
+            {
+                UpdateDownloader d = new UpdateDownloader(info, dest);
+                d.Run();
+                Console.WriteLine("updatefetch: saved   = " + dest);
+                Console.WriteLine("updatefetch: actual  = " + UpdateDownloader.Sha256File(dest));
+                Console.WriteLine("updatefetch OK");
+            }
+            catch (Exception ex)
+            {
+                // 校验失败走这里：把原因写清楚，退出码非 0，让 CI 能判定
+                Console.WriteLine("updatefetch: error = " + ex.Message);
+                Console.WriteLine("updatefetch REFUSED");
+                Environment.Exit(3);
+            }
+        }
+
+        // 诊断用：把更新提示窗渲染成 PNG，用来核对排版与多语言
+        static void UpdateShot(string path, bool screenGrab)
+        {
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
+            using (UpdateForm f = new UpdateForm(UpdateInfo.Sample()))
+            {
+                f.StartPosition = FormStartPosition.Manual;
+                f.Location = new Point(0, 0);
+                f.Show();
+                Application.DoEvents();
+
+                // --state=dl|fail 让截图能覆盖下载中与失败这两种真实的界面状态
+                foreach (string a in Environment.GetCommandLineArgs())
+                    if (a.StartsWith("--state=", StringComparison.OrdinalIgnoreCase))
+                    { f.ShowTestState(a.Substring(8)); break; }
+                Application.DoEvents();
+
+                if (path.Length > 0)
+                {
+                    using (Bitmap bmp = new Bitmap(f.Width, f.Height))
+                    {
+                        if (screenGrab)
+                        {
+                            using (Graphics g = Graphics.FromImage(bmp))
+                                g.CopyFromScreen(f.Location, Point.Empty, f.Size);
+                        }
+                        else f.DrawToBitmap(bmp, new Rectangle(0, 0, f.Width, f.Height));
+                        bmp.Save(path, System.Drawing.Imaging.ImageFormat.Png);
+                        Console.WriteLine("updateshot saved: " + path + "  " + bmp.Width + "x" + bmp.Height
+                            + (screenGrab ? "  [screen]" : ""));
+                    }
+                }
+                f.Close();
+            }
         }
 
         // 诊断用：检查全部语言的键是否齐全、标签列宽是否合理、字体是否真的存在
@@ -2775,8 +3085,18 @@ namespace Laocoon
                     catch (Exception ex) { Console.WriteLine("uishot collect: " + ex.Message); }
                 }
                 Application.DoEvents();
-                System.Threading.Thread.Sleep(screenGrab ? 800 : 500);
-                Application.DoEvents();
+                // 等界面稳定再抓。分段 pump 而不是一次 Sleep：Sleep 期间消息泵停着，
+                // 计时器（更新检查的延迟触发、方向消抖）一个都不会走。
+                // --wait=N 可以拉长，用来等后台的更新检查回来。
+                int wait = screenGrab ? 800 : 500;
+                foreach (string a in Environment.GetCommandLineArgs())
+                    if (a.StartsWith("--wait=", StringComparison.OrdinalIgnoreCase))
+                    { int.TryParse(a.Substring(7), out wait); break; }
+                for (int i = 0; i < wait; i += 80)
+                {
+                    System.Threading.Thread.Sleep(Math.Min(80, wait - i));
+                    Application.DoEvents();
+                }
 
                 if (path.Length > 0)
                 {
