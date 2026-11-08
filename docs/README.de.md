@@ -28,12 +28,10 @@ Der Bericht ist eine Liste von Tatsachen, kein Urteil. Sieh genau hin, und handl
 
 Da ist ein Fenster, das Sie nicht kennen — vielleicht etwas Unangenehmes. `F2` drücken, Fadenkreuz darüberziehen, klicken. Es legt alles offen, was sich über dieses Fenster und den dahinterstehenden Prozess herausfinden lässt.
 
-- Einzelne Datei `Laocoon.exe`, etwa **384 KB**
+- Einzelne Datei `Laocoon.exe`, etwa **466 KB**
 - Keine Fremdabhängigkeiten — nur das .NET Framework 4.x, das Windows mitbringt (Win10 / Win11, nichts zu installieren)
 - Keine Registrierungseinträge, keine Konfigurationsdateien, kein Hintergrundagent (entpacken, starten — auf der Platte bleibt nichts zurück)
-- Die einzige Netzverbindung ist eine Versionsprüfung beim Start: sie liest ein öffentliches Manifest auf GitHub und sendet nichts über den Rechner; `--noupdate` schaltet sie ab
-- Zwölf Sprachen eingebaut: **中文 / English / Русский / Français / Español / العربية / Deutsch / Português / 日本語 / 한국어 / हिन्दी / Italiano**
-
+- 61 Sprachen eingebaut: 12 vollständig übersetzt, 49 auf Oberflächenebene (Symbolleiste / Info / Update / Statusleiste), der Berichtstext bleibt englisch
 > Der Dateiname bleibt ASCII: `Laocoon.exe`. Im Fenstertitel steht weiterhin das Trema — `Laocoön`.
 > So stolpern Pfade, Kommandozeilen, Mailanhänge und CI nie über Nicht-ASCII-Zeichen.
 
@@ -55,7 +53,7 @@ Die Erfassung ist einmalig: nichts aktualisiert sich im Takt, nichts bleibt im H
 
 ## Oberflächensprachen
 
-**12 Sprachen** eingebaut, jederzeit über die Liste unten rechts umschaltbar, **ohne Neustart**:
+**61 Sprachen** eingebaut — 12 vollständig übersetzt + 49 auf Oberflächenebene (Symbolleiste / Info / Update / Statusleiste); jederzeit umschaltbar, **ohne Neustart**:
 
 | Code | Sprache | Fenstertitel |
 |---|---|---|
@@ -72,7 +70,7 @@ Die Erfassung ist einmalig: nichts aktualisiert sich im Takt, nichts bleibt im H
 | `hi` | हिन्दी | Laocoön · विंडो प्रोब |
 | `it` | Italiano | Laocoön · Sonda finestre |
 
-Warum genau diese zwölf: die Sprachen der fünf ständigen Mitglieder des UN-Sicherheitsrats als Basis, dazu **Arabisch** (die einzige UN-Arbeitssprache, die dort fehlt), **Deutsch / Portugiesisch / Japanisch / Koreanisch** (große Volkswirtschaften und Software-Ökosysteme), **Hindi** (zahlenmäßig größter einsprachiger Markt) und **Italienisch** (europäische Kultur). Türkisch, Indonesisch, Vietnamesisch und Polnisch fehlen — der Erweiterungspunkt bleibt offen: eine Sprache mehr heißt eine Tabelle mehr in `Lang.cs`.
+Warum genau diese zwölf: die Sprachen der fünf ständigen Mitglieder des UN-Sicherheitsrats als Basis, dazu **Arabisch** (die einzige UN-Arbeitssprache, die dort fehlt), **Deutsch / Portugiesisch / Japanisch / Koreanisch** (große Volkswirtschaften und Software-Ökosysteme), **Hindi** (zahlenmäßig größter einsprachiger Markt) und **Italienisch** (europäische Kultur). Dazu kommen 49 weitere Sprachen **auf Oberflächenebene** — wichtige europäische Sprachen, Naher Osten und Zentralasien, Süd- und Südostasien, große afrikanische Sprachen, dazu Esperanto. Symbolleiste, Info, Update-Dialog und Statusleiste sind übersetzt; der Berichtstext und seine Feldbezeichnungen (Handle, Class, PID …) bleiben englisch, denn diese Begriffe sind in Entwicklerdokumentationen ohnehin englisch. Eine Sprache vollständig übersetzen heißt, ihre Tabelle in `Lang.cs` zu vervollständigen; eine neue Sprache ist eine Zeile in `LangExtra.cs`.
 
 Die Auswahlliste ist **gestaffelt**: oben die fünf UN-Sprachen, eine Trennlinie, dann die Sprachen der großen Industrienationen (Deutsch / Japanisch / Koreanisch / Italienisch / Portugiesisch), darunter der Eintrag „Weitere Sprachen…“, der ein kleines Rasterfenster mit dem Rest öffnet — Arabisch und Hindi wohnen jetzt dort. Alltägliche Sprachen verlangen kein Scrollen, und jede später hinzugekommene landet von selbst in diesem Fenster.
 
@@ -115,7 +113,7 @@ Der ganze Bericht ist reiner Text: Spalten sind ausgerichtet, Abschnitte getrenn
 
 ## Automatische Updates
 
-Niemand sollte die Download-Seite einer neuen Version selbst suchen müssen. Ein paar Sekunden nach dem Start fragt das Programm einmal bei GitHub nach, ob es etwas Neueres als `1.6.0` gibt.
+Niemand sollte die Download-Seite einer neuen Version selbst suchen müssen. Ein paar Sekunden nach dem Start fragt das Programm einmal bei GitHub nach, ob es etwas Neueres als `1.7.0` gibt.
 
 - Gelesen wird ein einziges öffentliches Textmanifest (`releases/latest/download/latest.txt`): Version, Download-Adresse, SHA-256, Größe, Datum, eine Zeile Versionsnotiz
 - Über den Rechner wird **nichts** gesendet: keine Geräte-ID, keine Statistik, kein „wer benutzt das“
@@ -136,11 +134,12 @@ Manifest und EXE stammen aus demselben CI-Lauf, der Hash wird dort berechnet —
 - `WM_GETTEXT` für Steuerelementtexte hat bei nicht reagierenden Fenstern 60 ms Zeitlimit (`SMTO_ABORTIFHUNG`), damit die Oberfläche nie einfriert — deshalb bleibt bei einzelnen hängenden Fenstern der Text aus.
 - Der Steuerelementbaum endet bei 240 Einträgen, die Modulliste bei 400; darüber wird „gekürzt“ vermerkt.
 - Hashing stoppt bei 512 MB, darüber wird übersprungen (damit es nicht ewig dauert).
-- Die Sprache folgt dem System; außerhalb der zwölf wird Englisch verwendet. Die Übersetzungen sind von Hand geschrieben, und Windows-spezifische Begriffe (`WS_*` / `WS_EX_*`, `DWM Cloaked`) bleiben bewusst englisch, damit nicht jede Sprache ihr eigenes Vokabular erfindet.
+- Die Sprache folgt dem System; außerhalb der 61 wird Englisch verwendet. Die Übersetzungen sind von Hand geschrieben, und Windows-spezifische Begriffe (`WS_*` / `WS_EX_*`, `DWM Cloaked`) bleiben bewusst englisch, damit nicht jede Sprache ihr eigenes Vokabular erfindet.
 - Die arabische Oberfläche ist gespiegelt, **der Bericht bleibt aber immer links nach rechts** — das sind technische Daten, gespiegelt sind sie unlesbar. Das ist Absicht, keine unfertige Übersetzung.
 
 ## Versionsverlauf
 
+- **1.7.0** — Sprachen auf 61 erweitert: 12 vollständig + 49 auf Oberflächenebene (Symbolleiste / Info / Update / Statusleiste; der Berichtstext bleibt englisch); das Sprachpanel passt seine Spaltenzahl an den Bildschirm an, Schriften werden nach Schriftsystem gewählt (Devanagari / Thai / Khmer / Birmanisch / Georgisch / Armenisch / Äthiopisch …), Hebräisch / Persisch / Urdu folgen dem RTL-Spiegel
 - **1.6.1** — Gestaffelte Sprachauswahl: oben die fünf UN-Sprachen, dann die großen Industrienationen, und „Weitere Sprachen…“ öffnet ein Rasterfenster mit dem Rest; neuer Diagnoseschalter `--langmenu`
 - **1.6.0** — Automatische Updates: nach dem Start gleicht das Programm im Hintergrund das Manifest auf GitHub ab; gibt es eine neuere Version, erscheint eine Schaltfläche „Aktualisieren“ — ein Klick lädt herunter, prüft den SHA-256, tauscht die EXE und startet neu. Eine fehlgeschlagene Prüfung läuft still, `--noupdate` schaltet sie ab
 - **1.5.0** — Neues Fenster „Info“ (`F1` oder die letzte Schaltfläche in der Leiste): zwei Pixel-Animationen zu Namen und Aufgabe; beide stecken in der EXE, es ist nichts nachzuladen
@@ -169,12 +168,13 @@ Das Ergebnis liegt in `src\bin\Release\net48\Laocoon.exe`.
 ## Quellcode
 
 - `src/Laocoon.cs` — das Programm, rund 3191 Zeilen, ausschließlich Win32-P/Invoke, kein einziges NuGet-Paket
-- `src/Lang.cs` — Sprachkern (Enum, Erkennung, Schrift, Breite, Nachschlagen, Rückfall) und alle zwölf Tabellen in einer Datei, rund 2611 Zeilen
+- `src/Lang.cs` — Sprachkern (Enum, Erkennung, Schrift, Breite, Nachschlagen, Rückfall) und alle zwölf Tabellen in einer Datei, rund 2762 Zeilen
+`src/LangExtra.cs` — Textzeilen für die 49 Sprachen auf Oberflächenebene (eine Zeile pro Sprache, 38 Einträge), rund 120 Zeilen
 - `src/Update.cs` — das Update-Modul: Versionsvergleich, Manifest-Auswertung, Download mit SHA-256-Prüfung, Selbstaustausch-Skript und Update-Fenster, rund 1195 Zeilen
 - `src/Laocoon.ico` — das Pixel-Icon selbst (8 Größen, 16–256), erzeugt aus einem 16×16-Raster von `tools/make_icon.py`
 - `docs/img/*.gif` — die beiden Pixel-Animationen dieser README, Bild für Bild von `tools/make_gifs.py` gezeichnet (8 Farben, 160×90-Raster, ganzzahlige Skalierung)
 
-Jede Tabelle hat 159 Schlüssel, alle in die exe kompiliert. Keine `.resources`, keine Satellite Assemblies — auf jedem Win10/11-Rechner läuft es sofort, ohne „Sprachpaket fehlt, Rückfall auf Englisch“.
+Jede volle Tabelle hat 155 Schlüssel (Sprachen auf Oberflächenebene tragen die 38 Kerneinträge), alle in die exe kompiliert. Keine `.resources`, keine Satellite Assemblies — auf jedem Win10/11-Rechner läuft es sofort, ohne „Sprachpaket fehlt, Rückfall auf Englisch“.
 
 Zentrale Einstiegspunkte:
 - `Probe.HitTest` — läuft die Fenster oberster Ebene selbst in z-Reihenfolge ab (nicht `WindowFromPoint`, damit es nie die eigene Überlagerung trifft)
@@ -188,9 +188,9 @@ Zentrale Einstiegspunkte:
 ```
 Laocoon.exe --selftest out.txt     Konsolenfenster erfassen, Bericht drucken und in Datei schreiben
 Laocoon.exe --aimtest              Selbsttest für Trefferprüfung und Zielüberlagerung
-Laocoon.exe --i18ncheck            die 12 Sprachen prüfen: Schlüssel, Spaltenbreite, Schriften, Richtung
+Laocoon.exe --i18ncheck            die 61 Sprachen prüfen: Schlüssel, Spaltenbreite, Schriften, Richtung
 Laocoon.exe --langswitch           alle Sprachen durchschalten, Oberfläche und Bericht vergleichen
-Laocoon.exe --focustest f.log [shot.png]  alle 12 Sprachen durchschalten und prüfen, ob die Liste den Fokus behält
+Laocoon.exe --focustest f.log [shot.png]  alle 61 Sprachen durchschalten und prüfen, ob die Liste den Fokus behält
 Laocoon.exe --langstress 300 [log] [--rtl] simuliert die Tastenwiederholung: Handle-Neuerzeugung und Ressourcen
 Laocoon.exe --biditest out.png     Vergleich von 8 Bidi-Layouts (Arabisch + lateinische Daten)
 Laocoon.exe --lang=ru              in einer bestimmten Sprache starten (schreibt nicht in die ini)
@@ -205,4 +205,4 @@ Laocoon.exe --updateplan new.exe old.exe [page]  nur das Austauschskript schreib
 Laocoon.exe --updateshot out.png [--lang=xx] [--state=dl|fail]  das Update-Fenster rendern
 ```
 
-Zusammen mit `--lang=` rendert `--uishot` alle zwölf Oberflächen in einem Durchgang zur Sichtprüfung.
+Zusammen mit `--lang=` rendert `--uishot` alle 61 Oberflächen in einem Durchgang zur Sichtprüfung.

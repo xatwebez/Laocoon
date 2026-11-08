@@ -28,12 +28,10 @@ El informe es una lista de hechos, no una sentencia. Mira con cuidado y actúa c
 
 Ves una ventana que no reconoces — puede que algo indeseable. Pulsa `F2`, lleva la mira encima y haz clic. Sacará todo lo que se pueda extraer de esa ventana y del proceso que la sostiene.
 
-- Un solo archivo `Laocoon.exe`, unos **384 KB**
+- Un solo archivo `Laocoon.exe`, unos **466 KB**
 - Cero dependencias de terceros: solo el .NET Framework 4.x que viene con Windows (Win10 / Win11, nada que instalar)
 - Sin escrituras en el registro, sin archivos de configuración, sin agente en segundo plano (se descomprime, se ejecuta — nada queda en el disco)
-- La única conexión es una comprobación de versión al arrancar: lee un manifiesto público en GitHub y no envía nada sobre el equipo; `--noupdate` la desactiva
-- Doce idiomas integrados: **中文 / English / Русский / Français / Español / العربية / Deutsch / Português / 日本語 / 한국어 / हिन्दी / Italiano**
-
+- 61 idiomas integrados: 12 traducidos por completo, 49 a nivel de interfaz (barra de herramientas / acerca de / actualización / barra de estado); el cuerpo del informe sigue en inglés
 > El nombre del archivo es `Laocoon.exe` en ASCII; el título de la ventana conserva la diéresis — `Laocoön`.
 > Así las rutas, las líneas de comandos, los adjuntos de correo y la CI nunca tropiezan con caracteres no ASCII.
 
@@ -55,7 +53,7 @@ La captura es única: nada se refresca por temporizador, nada se queda en segund
 
 ## Idiomas de la interfaz
 
-**12 idiomas** integrados; se cambian en cualquier momento desde la lista de abajo a la derecha, **sin reiniciar**:
+**61 idiomas** integrados — 12 traducidos por completo + 49 a nivel de interfaz (barra de herramientas / acerca de / actualización / barra de estado); se cambian en cualquier momento, **sin reiniciar**:
 
 | Código | Idioma | Título de la ventana |
 |---|---|---|
@@ -72,7 +70,7 @@ La captura es única: nada se refresca por temporizador, nada se queda en segund
 | `hi` | हिन्दी | Laocoön · विंडो प्रोब |
 | `it` | Italiano | Laocoön · Sonda finestre |
 
-Por qué estos doce: los idiomas de los cinco miembros permanentes del Consejo de Seguridad de la ONU como base, más el **árabe** (el único idioma de trabajo de la ONU que falta en esa lista), **alemán / portugués / japonés / coreano** (grandes economías y ecosistemas de software), **hindi** (el mayor mercado monolingüe por población) e **italiano** (cultura europea). Turco, indonesio, vietnamita y polaco no están: el punto de extensión queda abierto, añadir uno es añadir una tabla en `Lang.cs`.
+Por qué estos doce: los idiomas de los cinco miembros permanentes del Consejo de Seguridad de la ONU como base, más el **árabe** (el único idioma de trabajo de la ONU que falta en esa lista), **alemán / portugués / japonés / coreano** (grandes economías y ecosistemas de software), **hindi** (el mayor mercado monolingüe por población) e **italiano** (cultura europea). Además, otros 49 idiomas van a **nivel de interfaz** — principales lenguas europeas, Oriente Medio y Asia Central, Asia meridional y sudoriental, grandes lenguas africanas, más esperanto. La barra de herramientas, «acerca de», la ventana de actualización y la barra de estado están traducidos; el cuerpo del informe y sus etiquetas (Handle, Class, PID…) siguen en inglés, porque esos términos están en inglés en toda la documentación para desarrolladores. Traducir un idioma por completo = completar su tabla en `Lang.cs`; añadir uno nuevo = una línea en `LangExtra.cs`.
 
 El desplegable es **por niveles**: arriba los cinco idiomas de la ONU, un separador y después los de las grandes economías desarrolladas (alemán / japonés / coreano / italiano / portugués); debajo, la entrada «Más idiomas…» abre un pequeño panel en cuadrícula con el resto en una sola pantalla — el árabe y el hindi viven ahí ahora. Los idiomas habituales no hacen scroll, y cualquier idioma que se añada después caerá solo en ese panel.
 
@@ -115,7 +113,7 @@ Todo el informe es texto plano: columnas alineadas y secciones separadas; puedes
 
 ## Actualización automática
 
-Nadie debería tener que buscar la página de descargas de una versión nueva. Unos segundos después de arrancar, el programa pregunta una vez a GitHub si hay algo más reciente que `1.6.0`.
+Nadie debería tener que buscar la página de descargas de una versión nueva. Unos segundos después de arrancar, el programa pregunta una vez a GitHub si hay algo más reciente que `1.7.0`.
 
 - Lee un único manifiesto de texto público (`releases/latest/download/latest.txt`): versión, URL de descarga, SHA-256, tamaño, fecha y una línea de notas
 - **No envía** nada sobre el equipo: ni identificador, ni estadísticas, ni «quién lo usa»
@@ -136,11 +134,12 @@ El manifiesto y el exe salen de la misma ejecución de CI y el hash se calcula a
 - `WM_GETTEXT` para el texto de controles aplica un tiempo límite de 60 ms en ventanas que no responden (`SMTO_ABORTIFHUNG`) para no congelar la interfaz; por eso, en contadas ventanas colgadas no hay texto.
 - El árbol de controles se corta en 240 elementos y la lista de módulos en 400; lo que sobra se marca como truncado.
 - El cálculo de hash se detiene a los 512 MB y por encima se omite (para no esperar una eternidad).
-- El idioma sigue al sistema; fuera de los doce, se usa inglés. Las traducciones están escritas a mano, y términos propios de Windows (`WS_*` / `WS_EX_*`, `DWM Cloaked`) se dejan a propósito en inglés para que cada idioma no invente su propio vocabulario.
+- El idioma sigue al sistema; fuera de los 61, se usa inglés. Las traducciones están escritas a mano, y términos propios de Windows (`WS_*` / `WS_EX_*`, `DWM Cloaked`) se dejan a propósito en inglés para que cada idioma no invente su propio vocabulario.
 - La interfaz árabe va en espejo, pero **el informe siempre de izquierda a derecha**: son datos técnicos y reflejarlos los vuelve ilegibles. Es deliberado, no una traducción a medias.
 
 ## Historial de versiones
 
+- **1.7.0** — Idiomas ampliados a 61: 12 completos + 49 a nivel de interfaz (barra de herramientas / acerca de / actualización / barra de estado; el cuerpo del informe sigue en inglés); el panel de idiomas adapta sus columnas a la pantalla, las fuentes se eligen según el sistema de escritura (devanagari / tailandés / jemer / birmano / georgiano / armenio / etíope…) y hebreo / persa / urdu se suman al modo RTL
 - **1.6.1** — Desplegable de idiomas por niveles: los cinco de la ONU arriba, luego las grandes economías desarrolladas y «Más idiomas…», que abre una cuadrícula de una pantalla con el resto; nuevo diagnóstico `--langmenu`
 - **1.6.0** — Actualización automática: al arrancar compara en segundo plano el manifiesto de GitHub; si hay una versión más nueva aparece un botón «Actualizar» — al pulsarlo descarga, verifica el SHA-256, sustituye el exe y se reinicia. Una comprobación fallida pasa en silencio, `--noupdate` la desactiva
 - **1.5.0** — Nueva ventana «Acerca de» (`F1` o el último botón de la barra): dos animaciones pixel, una sobre el origen del nombre y otra sobre lo que hace; van incluidas en el exe, nada extra que descargar
@@ -169,12 +168,13 @@ El resultado queda en `src\bin\Release\net48\Laocoon.exe`.
 ## Código fuente
 
 - `src/Laocoon.cs` — el programa, unas 3191 líneas, todo P/Invoke de Win32, sin ningún paquete NuGet
-- `src/Lang.cs` — núcleo de idiomas (enumeración, detección, fuente, ancho, búsqueda, repliegue) y las doce tablas en un solo archivo, unas 2611 líneas
+- `src/Lang.cs` — núcleo de idiomas (enumeración, detección, fuente, ancho, búsqueda, repliegue) y las doce tablas en un solo archivo, unas 2762 líneas
+`src/LangExtra.cs` — filas de frases para los 49 idiomas de nivel de interfaz (una fila por idioma, 38 entradas), unas 120 líneas
 - `src/Update.cs` — el módulo de actualización: comparación de versiones, lectura del manifiesto, descarga con verificación SHA-256, script de autorreemplazo y ventana de actualización, unas 1195 líneas
 - `src/Laocoon.ico` — el icono pixel art (8 tamaños, 16 a 256), generado desde una rejilla de 16×16 con `tools/make_icon.py`
 - `docs/img/*.gif` — las dos animaciones pixel de este README, dibujadas fotograma a fotograma por `tools/make_gifs.py` (8 colores, rejilla 160×90, escalado entero)
 
-Cada tabla tiene 159 claves, todas compiladas dentro del exe. Sin `.resources` ni satellite assemblies: en cualquier máquina Win10/11 funciona sin «falta el paquete de idioma, vuelvo al inglés».
+Cada tabla completa tiene 155 claves (los idiomas de nivel de interfaz llevan las 38 entradas básicas), todas compiladas dentro del exe. Sin `.resources` ni satellite assemblies: en cualquier máquina Win10/11 funciona sin «falta el paquete de idioma, vuelvo al inglés».
 
 Puntos de entrada principales:
 - `Probe.HitTest` — recorre él mismo las ventanas de nivel superior en orden z (no usa `WindowFromPoint`, para no acertar en su propia capa)
@@ -188,9 +188,9 @@ Puntos de entrada principales:
 ```
 Laocoon.exe --selftest out.txt     capturar la ventana de consola, imprimir el informe y escribirlo en un archivo
 Laocoon.exe --aimtest              autoprueba del hit-testing y de la capa de puntería
-Laocoon.exe --i18ncheck            revisar los 12 idiomas: claves, ancho de columna, fuentes, dirección
+Laocoon.exe --i18ncheck            revisar los 61 idiomas: claves, ancho de columna, fuentes, dirección
 Laocoon.exe --langswitch           recorrer todos los idiomas y comprobar interfaz e informe
-Laocoon.exe --focustest f.log [shot.png]  recorrer los 12 idiomas y comprobar que el selector conserva el foco
+Laocoon.exe --focustest f.log [shot.png]  recorrer los 61 idiomas y comprobar que el selector conserva el foco
 Laocoon.exe --langstress 300 [log] [--rtl] simula la repetición de flechas: recreación de handles y recursos
 Laocoon.exe --biditest out.png     comparativa de 8 maquetaciones bidi (árabe + datos latinos)
 Laocoon.exe --lang=ru              arrancar en un idioma dado (no se escribe en el ini)
@@ -205,4 +205,4 @@ Laocoon.exe --updateplan new.exe old.exe [page]  escribir solo el script de reem
 Laocoon.exe --updateshot out.png [--lang=xx] [--state=dl|fail]  renderizar la ventana de actualización
 ```
 
-Combinado con `--lang=`, `--uishot` renderiza las doce interfaces de una vez para revisarlas a ojo.
+Combinado con `--lang=`, `--uishot` renderiza las 61 interfaces de una vez para revisarlas a ojo.

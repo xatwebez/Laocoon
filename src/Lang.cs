@@ -1,12 +1,14 @@
 ﻿// Laocoön - 多语言支持 / localization
 //
-// 全部 12 种语言都在这一个文件里：上半部分是语言机制（枚举、识别、字体、宽度、取词），
-// 下半部分从「简体中文」起是 12 张文案表，顺序为中 / 英 / 俄 / 法 / 西 / 阿 / 德 / 葡 / 日 / 韩 / 印 / 意。
-// 加一种语言只需照最后一张表补一张，再在 LangId 与 All 里登记，别处不用改。
+// 61 种语言，两层翻译：
+//   · 全量表 12 种（中 / 英 / 俄 / 法 / 西 / 阿 / 德 / 葡 / 日 / 韩 / 印 / 意）在本文件下半部分，
+//     159 条文案一条不缺，报告里的字段标签也是译好的；
+//   · 界面表 49 种在 LangExtra.cs，只翻"看得见"的 38 条（工具条 / 关于 / 更新 / 状态栏），
+//     报告正文与字段标签（lbl.* / rep.* / flag.*）仍走英语 —— Handle、Class、PID 这类词
+//     在各国开发者文档里本来就是英文，硬翻只会更难读。缺的键由 T() 回落英语。
 //
-// 这 12 种是怎么定的：五常语言打底（中/英/俄/法/西），其余按"全球影响力"补齐——
-// 阿拉伯语（联合国第六种工作语言）、德语 / 葡萄牙语 / 日语 / 韩语（主要经济体与软件生态）、
-// 印地语（人口最大的单一语言市场）、意大利语（欧洲文化圈）。
+// 加语言：LangId 里加一行、Codes / Natives 各加一项、LangExtra 里加一行文案；
+// 若想把某语言做成全量，照本文件里任意一张表补 159 条，再在 Table() 里挂上去。
 //
 // 所有文案都编译进 exe 本身，不生成 .resources / satellite assembly，保持"单文件、零依赖"。
 // 选择优先级：命令行 --lang=xx  >  系统界面语言  >  英语
@@ -19,16 +21,80 @@ namespace Laocoon
 {
     internal enum LangId
     {
-        Zh = 0, En = 1, Ru = 2, Fr = 3, Es = 4,
-        Ar = 5, De = 6, Pt = 7, Ja = 8, Ko = 9, Hi = 10, It = 11
+            Zh = 0, En = 1, Ru = 2, Fr = 3, Es = 4, Ar = 5,
+            De = 6, Pt = 7, Ja = 8, Ko = 9, Hi = 10, It = 11,
+            Nl = 12, Sv = 13, Nb = 14, Da = 15, Fi = 16, Is = 17,
+            Pl = 18, Cs = 19, Sk = 20, Hu = 21, Ro = 22, Bg = 23,
+            El = 24, Tr = 25, Uk = 26, Be = 27, Sr = 28, Hr = 29,
+            Sl = 30, Sq = 31, Et = 32, Lv = 33, Lt = 34, Ca = 35,
+            Gl = 36, Eu = 37, Eo = 38, He = 39, Fa = 40, Ur = 41,
+            Az = 42, Kk = 43, Ky = 44, Hy = 45, Ka = 46, Th = 47,
+            Vi = 48, Id = 49, Ms = 50, Tl = 51, Km = 52, My = 53,
+            Mn = 54, Sw = 55, Af = 56, Am = 57, Bn = 58, Ta = 59,
+            Ne = 60
     }
 
     internal static partial class L
     {
         public static readonly LangId[] All = new LangId[]
         {
-            LangId.Zh, LangId.En, LangId.Ru, LangId.Fr, LangId.Es,
-            LangId.Ar, LangId.De, LangId.Pt, LangId.Ja, LangId.Ko, LangId.Hi, LangId.It
+            LangId.Zh, LangId.En, LangId.Ru, LangId.Fr, LangId.Es, LangId.Ar,
+            LangId.De, LangId.Pt, LangId.Ja, LangId.Ko, LangId.Hi, LangId.It,
+            LangId.Nl, LangId.Sv, LangId.Nb, LangId.Da, LangId.Fi, LangId.Is,
+            LangId.Pl, LangId.Cs, LangId.Sk, LangId.Hu, LangId.Ro, LangId.Bg,
+            LangId.El, LangId.Tr, LangId.Uk, LangId.Be, LangId.Sr, LangId.Hr,
+            LangId.Sl, LangId.Sq, LangId.Et, LangId.Lv, LangId.Lt, LangId.Ca,
+            LangId.Gl, LangId.Eu, LangId.Eo, LangId.He, LangId.Fa, LangId.Ur,
+            LangId.Az, LangId.Kk, LangId.Ky, LangId.Hy, LangId.Ka, LangId.Th,
+            LangId.Vi, LangId.Id, LangId.Ms, LangId.Tl, LangId.Km, LangId.My,
+            LangId.Mn, LangId.Sw, LangId.Af, LangId.Am, LangId.Bn, LangId.Ta,
+            LangId.Ne
+        };
+
+        // 代码 / 母语名两张表与 LangId 严格同序（按枚举值下标取），
+        // 加语言 = 枚举里加一行 + 这两张表各加一项 + LangExtra 里加一行文案
+        static readonly string[] Codes = new string[]
+        {
+            "zh", "en", "ru", "fr", "es", "ar",
+            "de", "pt", "ja", "ko", "hi", "it",
+            "nl", "sv", "nb", "da", "fi", "is",
+            "pl", "cs", "sk", "hu", "ro", "bg",
+            "el", "tr", "uk", "be", "sr", "hr",
+            "sl", "sq", "et", "lv", "lt", "ca",
+            "gl", "eu", "eo", "he", "fa", "ur",
+            "az", "kk", "ky", "hy", "ka", "th",
+            "vi", "id", "ms", "tl", "km", "my",
+            "mn", "sw", "af", "am", "bn", "ta",
+            "ne"
+        };
+
+        static readonly string[] Natives = new string[]
+        {
+            "中文", "English", "Русский", "Français", "Español", "العربية",
+            "Deutsch", "Português", "日本語", "한국어", "हिन्दी", "Italiano",
+            "Nederlands", "Svenska", "Norsk bokmål", "Dansk", "Suomi", "Íslenska",
+            "Polski", "Čeština", "Slovenčina", "Magyar", "Română", "Български",
+            "Ελληνικά", "Türkçe", "Українська", "Беларуская", "Српски", "Hrvatski",
+            "Slovenščina", "Shqip", "Eesti", "Latviešu", "Lietuvių", "Català",
+            "Galego", "Euskara", "Esperanto", "עברית", "فارسی", "اردو",
+            "Azərbaycan dili", "Қазақша", "Кыргызча", "Հայերեն", "ქართული", "ไทย",
+            "Tiếng Việt", "Bahasa Indonesia", "Bahasa Melayu", "Filipino", "ខ្មែរ", "မြန်မာ",
+            "Монгол", "Kiswahili", "Afrikaans", "አማርኛ", "বাংলা", "தமிழ்",
+            "नेपाली"
+        };
+
+        // 扩展语言只翻译这些键（界面级）：工具条、关于、更新、状态栏。
+        // 顺序与 LangExtra.Rows 的字段一一对应，改动这里必须同步改那些行，否则字段会错位。
+        public static readonly string[] Core = new string[]
+        {
+            "app.brand", "app.title", "btn.aim", "btn.aim.cancel", "btn.copytext",
+            "btn.save", "btn.openloc", "btn.clear", "btn.about", "about.title",
+            "about.version", "about.link", "about.close", "st.lang", "ui.lang.more",
+            "ui.lang.other", "st.ready", "st.langchanged", "st.done", "st.collecting",
+            "st.copiedtext", "common.yes", "common.no", "welcome", "btn.update",
+            "upd.title", "upd.head", "upd.ver", "upd.notes", "upd.now",
+            "upd.later", "upd.cancel", "upd.latest", "upd.check", "upd.checking",
+            "upd.dl", "upd.verify", "upd.err"
         };
 
         // 语言选择器的分层：一级下拉先给五常，接一条分隔线，再给主要发达国家，
@@ -74,41 +140,15 @@ namespace Laocoon
 
         public static string Code(LangId id)
         {
-            switch (id)
-            {
-                case LangId.Zh: return "zh";
-                case LangId.Ru: return "ru";
-                case LangId.Fr: return "fr";
-                case LangId.Es: return "es";
-                case LangId.Ar: return "ar";
-                case LangId.De: return "de";
-                case LangId.Pt: return "pt";
-                case LangId.Ja: return "ja";
-                case LangId.Ko: return "ko";
-                case LangId.Hi: return "hi";
-                case LangId.It: return "it";
-                default: return "en";
-            }
+            int i = (int)id;
+            return (i >= 0 && i < Codes.Length) ? Codes[i] : "en";
         }
 
         // 语言名一律用该语言自己的写法，切换菜单里不需要翻译
         public static string Native(LangId id)
         {
-            switch (id)
-            {
-                case LangId.Zh: return "中文";
-                case LangId.Ru: return "Русский";
-                case LangId.Fr: return "Français";
-                case LangId.Es: return "Español";
-                case LangId.Ar: return "العربية";
-                case LangId.De: return "Deutsch";
-                case LangId.Pt: return "Português";
-                case LangId.Ja: return "日本語";
-                case LangId.Ko: return "한국어";
-                case LangId.Hi: return "हिन्दी";
-                case LangId.It: return "Italiano";
-                default: return "English";
-            }
+            int i = (int)id;
+            return (i >= 0 && i < Natives.Length) ? Natives[i] : "English";
         }
 
         // 接受 zh / zh-CN / zh-Hans / ru-RU / es-419 / pt-BR 等写法；无法识别返回 false
@@ -118,30 +158,22 @@ namespace Laocoon
             if (s == null) return false;
             s = s.Trim().ToLowerInvariant();
             if (s.Length == 0) return false;
+
             int dash = s.IndexOf('-');
             string head = dash > 0 ? s.Substring(0, dash) : s;
             if (head.Length == 0) return false;
 
-            switch (head)
-            {
-                case "zh": id = LangId.Zh; return true;
-                case "en": id = LangId.En; return true;
-                case "ru": id = LangId.Ru; return true;
-                case "fr": id = LangId.Fr; return true;
-                case "es": id = LangId.Es; return true;
-                case "ar": id = LangId.Ar; return true;
-                case "de": id = LangId.De; return true;
-                case "pt": id = LangId.Pt; return true;
-                case "ja": id = LangId.Ja; return true;
-                case "ko": id = LangId.Ko; return true;
-                case "hi": id = LangId.Hi; return true;
-                case "it": id = LangId.It; return true;
-                // 未支持的语言明确拒绝，而不是悄悄回落成别的语言
-                case "iw": return false;   // 希伯来语
-                case "in": return false;   // 印尼语
-                case "no": return false;   // 挪威语
-            }
-            return false;
+            // Windows / 老资料里的几个别名，先归一化再查表
+            if (head == "iw") head = "he";        // 希伯来语
+            else if (head == "in") head = "id";   // 印尼语
+            else if (head == "no") head = "nb";   // 挪威语（书面）
+            else if (head == "nb" || head == "nn") head = "nb";
+            else if (head == "zh") head = "zh";   // zh-CN / zh-Hant 都归中文
+
+            int i = Array.IndexOf(Codes, head);
+            if (i < 0) return false;
+            id = All[i];
+            return true;
         }
 
         public static LangId Detect()
@@ -190,7 +222,7 @@ namespace Laocoon
                 // 阿拉伯语的格式化参数统一用 LRM 包住：像 "目标: {类名}  PID {2}" 这种行，
                 // 裸的拉丁值夹在阿拉伯文里会被重排（日期最明显，会变成 04:28:37 08-11-2026）。
                 // LRM 是零宽字符，不影响显示，只是告诉渲染器"这一段按从左到右算"。
-                if (_id == LangId.Ar && args != null && args.Length > 0)
+                if (IsRtl && args != null && args.Length > 0)
                 {
                     object[] w = new object[args.Length];
                     for (int i = 0; i < args.Length; i++)
@@ -209,13 +241,23 @@ namespace Laocoon
         {
             get
             {
-                switch (_id)
+                // 按书写系统挑字体，不按国家挑：同一套字母可能是好几个国家在用
+                string c = Code(_id);
+                switch (c)
                 {
-                    case LangId.Zh: return Pick("Microsoft YaHei UI", "Microsoft YaHei", "SimSun", "Segoe UI");
-                    case LangId.Ja: return Pick("Yu Gothic UI", "Meiryo UI", "MS UI Gothic", "Segoe UI");
-                    case LangId.Ko: return Pick("Malgun Gothic", "Gulim", "Batang", "Segoe UI");
-                    case LangId.Hi: return Pick("Nirmala UI", "Mangal", "Arial Unicode MS", "Segoe UI");
-                    case LangId.Ar: return Pick("Segoe UI", "Tahoma", "Arial");
+                    case "zh": return Pick("Microsoft YaHei UI", "Microsoft YaHei", "SimSun", "Segoe UI");
+                    case "ja": return Pick("Yu Gothic UI", "Meiryo UI", "MS UI Gothic", "Segoe UI");
+                    case "ko": return Pick("Malgun Gothic", "Gulim", "Batang", "Segoe UI");
+                    case "hi": case "mr": case "ne": case "bn":
+                    case "gu": case "pa": case "ta": case "te": case "kn": case "ml":
+                        return Pick("Nirmala UI", "Mangal", "Arial Unicode MS", "Segoe UI");
+                    case "th": case "lo": return Pick("Leelawadee UI", "Tahoma", "Segoe UI");
+                    case "km": return Pick("Khmer UI", "Leelawadee UI", "Tahoma", "Segoe UI");
+                    case "my": return Pick("Myanmar Text", "Myanmar UI", "Segoe UI");
+                    case "am": return Pick("Nyala", "Ebrima", "Segoe UI");
+                    case "mn": return Pick("Mongolian Baiti", "Segoe UI");
+                    case "ka": case "hy": return Pick("Segoe UI", "Sylfaen", "Arial Unicode MS");
+                    case "ar": case "fa": case "ur": case "he": return Pick("Segoe UI", "Tahoma", "Arial");
                     default: return Pick("Segoe UI", "Tahoma", "Arial");
                 }
             }
@@ -227,26 +269,45 @@ namespace Laocoon
         {
             get
             {
-                switch (_id)
+                string c = Code(_id);
+                switch (c)
                 {
-                    case LangId.Ja: return Pick("MS Gothic", "Yu Gothic UI", "Consolas");
-                    case LangId.Ko: return Pick("GulimChe", "Malgun Gothic", "Consolas");
-                    case LangId.Zh: return Pick("Consolas", "Microsoft YaHei UI", "SimSun");
-                    case LangId.Hi: return Pick("Nirmala UI", "Consolas");
-                    case LangId.Ar: return Pick("Consolas", "Segoe UI");
-                    default: return Pick("Consolas", "Courier New");
+                    case "ja": return Pick("MS Gothic", "Yu Gothic UI", "Consolas");
+                    case "ko": return Pick("GulimChe", "Malgun Gothic", "Consolas");
+                    case "zh": return Pick("Consolas", "Microsoft YaHei UI", "SimSun");
                 }
+                // 复杂文字没有等宽系统字体，硬用 Consolas 只会满屏豆腐块
+                return IsComplexScript(c) ? UiFont : Pick("Consolas", "Courier New");
             }
         }
 
-        // 阿拉伯语是从右到左书写，界面布局要整体镜像
-        public static bool IsRtl { get { return _id == LangId.Ar; } }
+        // 阿拉伯 / 希伯来 / 波斯 / 乌尔都：从右往左
+        static readonly string[] RtlCodes = new string[] { "ar", "he", "fa", "ur" };
+
+        // 没有等宽字体、也不适合"补空格对齐"的文字系统
+        static bool IsComplexScript(string c)
+        {
+            switch (c)
+            {
+                case "hi": case "mr": case "ne": case "bn":
+                case "gu": case "pa": case "ta": case "te": case "kn": case "ml":
+                case "th": case "lo": case "km": case "my":
+                case "am": case "ka": case "hy": case "mn":
+                    return true;
+            }
+            return false;
+        }
+
+        // 从右到左书写：界面布局要整体镜像
+        public static bool IsRtl { get { return Array.IndexOf(RtlCodes, Code(_id)) >= 0; } }
 
         // 阿拉伯文、天城文在等宽字体里没有固定字宽，"补空格对齐"只会对得更歪，
         // 这两种语言改成 "标签: 值" 的写法，宁可不对齐也不假装对齐。
         public static bool PadLabels
         {
-            get { return _id != LangId.Ar && _id != LangId.Hi; }
+            // 阿拉伯文、天城文等在等宽字体里没有固定字宽，"补空格对齐"只会对得更歪，
+            // 这些语言改成 "标签: 值" 的写法，宁可不对齐也不假装对齐
+            get { return !IsRtl && !IsComplexScript(Code(_id)); }
         }
 
         static HashSet<string> _fontSet;
@@ -311,11 +372,14 @@ namespace Laocoon
         static void RecalcLabelCol()
         {
             int max = 0;
-            foreach (KeyValuePair<string, string> kv in _cur)
+            // 界面级语言没有 lbl.*，这时按英语的标签量列宽，报告才对得齐
+            foreach (KeyValuePair<string, string> kv in _en)
             {
                 if (!kv.Key.StartsWith("lbl.", StringComparison.Ordinal)) continue;
-                int w = DispWidth(kv.Value);
-                if (w > max) { max = w; LongestLabel = kv.Value; }
+                string v;
+                if (!_cur.TryGetValue(kv.Key, out v) || v == null || v.Length == 0) v = kv.Value;
+                int w = DispWidth(v);
+                if (w > max) { max = w; LongestLabel = v; }
             }
             LabelCol = max + 2;
             if (LabelCol < 12) LabelCol = 12;
@@ -340,6 +404,35 @@ namespace Laocoon
             return miss;
         }
 
+        // 界面级语言必须把 Core 写全：这些是按钮和状态栏，缺一条用户就直接看见英语
+        public static List<string> MissingCore(LangId id)
+        {
+            List<string> miss = new List<string>();
+            Dictionary<string, string> t = Table(id);
+            foreach (string k in Core)
+            {
+                string v;
+                if (!t.TryGetValue(k, out v) || v == null || v.Length == 0) miss.Add(k);
+            }
+            return miss;
+        }
+
+        // 相对英语的覆盖率（%），给 --i18ncheck 和 README 用
+        public static int Coverage(LangId id)
+        {
+            Dictionary<string, string> t = Table(id);
+            if (_en.Count == 0) return 0;
+            int have = 0;
+            foreach (string k in _en.Keys)
+            {
+                string v;
+                if (t.TryGetValue(k, out v) && v != null && v.Length > 0) have++;
+            }
+            return (int)Math.Round(100.0 * have / _en.Count);
+        }
+
+        public static bool IsPartial(LangId id) { return Coverage(id) < 100; }
+
         public static int KeyCount { get { return _en.Count; } }
 
         static Dictionary<string, string> Table(LangId id)
@@ -357,8 +450,12 @@ namespace Laocoon
                 case LangId.Ko: return Ko();
                 case LangId.Hi: return Hi();
                 case LangId.It: return It();
-                default: return _en;
             }
+
+            // 其余 49 种是界面级表（LangExtra.cs）：只有 Core 那批键，
+            // 报告字段标签缺的键由 T() 回落英语
+            Dictionary<string, string> extra = ExtraTable(Code(id));
+            return extra != null ? extra : _en;
         }
 
         static Dictionary<string, string> D(string[] kv)

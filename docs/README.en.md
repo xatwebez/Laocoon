@@ -28,12 +28,10 @@ The report is a list of facts, not a sentence. Look carefully, then act carefull
 
 You see a window you don't recognise — possibly something nasty. Press `F2`, drag the crosshair onto it, click. It lays out everything it can dig up about that window and the process behind it.
 
-- Single file `Laocoon.exe`, about **384 KB**
+- Single file `Laocoon.exe`, about **466 KB**
 - Zero third-party dependencies — only the .NET Framework 4.x that ships with Windows (Win10 / Win11, nothing to install)
 - No registry writes, no config files, no background agent (unzip, run — and nothing is left on disk)
-- The only network activity is one version check at startup: it reads a public manifest on GitHub and sends nothing about your machine; `--noupdate` turns it off
-- Twelve languages built in: **中文 / English / Русский / Français / Español / العربية / Deutsch / Português / 日本語 / 한국어 / हिन्दी / Italiano**
-
+- 61 languages built in: 12 fully translated, 49 at interface level (toolbar / about / update / status bar); the report body stays English
 > The file is ASCII `Laocoon.exe`; the window title keeps the diaeresis — `Laocoön`.
 > That way paths, command lines, mail attachments and CI never trip over non-ASCII characters.
 
@@ -55,7 +53,7 @@ Capturing is one-shot: nothing refreshes on a timer, nothing sits in the backgro
 
 ## Interface languages
 
-**12 languages** built in; switch any time from the dropdown in the bottom-right, **no restart**:
+**61 languages** built in — 12 fully translated + 49 at interface level (toolbar / about / update / status bar); switch any time from the dropdown, **no restart**:
 
 | Code | Language | Window title |
 |---|---|---|
@@ -72,7 +70,7 @@ Capturing is one-shot: nothing refreshes on a timer, nothing sits in the backgro
 | `hi` | हिन्दी | Laocoön · विंडो प्रोब |
 | `it` | Italiano | Laocoön · Sonda finestre |
 
-How the twelve were chosen: the five permanent members of the UN Security Council as the base, plus **Arabic** (the one UN working language that list misses), **German / Portuguese / Japanese / Korean** (major economies and software ecosystems), **Hindi** (the largest single-language market by population) and **Italian** (European culture). Turkish, Indonesian, Vietnamese and Polish are not included — the extension point is there, adding one means one more table in `Lang.cs`.
+How the twelve were chosen: the five permanent members of the UN Security Council as the base, plus **Arabic** (the one UN working language that list misses), **German / Portuguese / Japanese / Korean** (major economies and software ecosystems), **Hindi** (the largest single-language market by population) and **Italian** (European culture). On top of these, 49 more languages ship at **interface level** — major European languages, the Middle East and Central Asia, South and Southeast Asia, major African languages, plus Esperanto. Toolbar, About, the update dialog and the status bar are translated; the report body and its field labels (Handle, Class, PID and friends) stay English, because those words are English in developer documentation everywhere. Promoting a language to full translation means completing its table in `Lang.cs`; adding a new language is one line in `LangExtra.cs`.
 
 The dropdown is **tiered**: the five UN languages on top, a separator, then the languages of the major developed economies (German / Japanese / Korean / Italian / Portuguese), and below that a "More languages…" entry that opens a small grid panel with the rest on one screen — Arabic and Hindi live there now. Everyday languages never need scrolling, and any language added later lands in that panel automatically.
 
@@ -115,7 +113,7 @@ The whole report is plain text: columns line up, sections are separated, so you 
 
 ## Automatic updates
 
-Nobody should have to hunt down a download page for a new build. A few seconds after launch, the program asks GitHub once whether anything newer than `1.6.0` exists.
+Nobody should have to hunt down a download page for a new build. A few seconds after launch, the program asks GitHub once whether anything newer than `1.7.0` exists.
 
 - It reads one public plain-text manifest (`releases/latest/download/latest.txt`): version, download URL, SHA-256, size, date, one line of release notes
 - It sends **nothing** about your machine — no device ID, no telemetry, no "who is using this"
@@ -136,11 +134,12 @@ The manifest and the exe come out of the same CI run and the hash is computed th
 - `WM_GETTEXT` for control text uses a 60 ms timeout on unresponsive windows (`SMTO_ABORTIFHUNG`) so the UI never freezes — which means a handful of hung windows give no text.
 - The child tree is capped at 240 items and the module list at 400; anything beyond is marked as truncated.
 - Hashing stops at 512 MB and is skipped beyond that (to avoid a long stall).
-- UI language follows the system; anything outside the twelve falls back to English. Translations are hand-written, and Windows-specific terms such as `WS_*` / `WS_EX_*` and `DWM Cloaked` are deliberately left in English so each locale doesn't invent its own vocabulary.
+- UI language follows the system; anything outside the 61 falls back to English. Translations are hand-written, and Windows-specific terms such as `WS_*` / `WS_EX_*` and `DWM Cloaked` are deliberately left in English so each locale doesn't invent its own vocabulary.
 - The Arabic UI is mirrored, but **the report always reads left-to-right** — it is technical data, and mirroring it makes it unreadable. That is deliberate, not an unfinished translation.
 
 ## Changelog
 
+- **1.7.0** — Languages expanded to 61: 12 fully translated plus 49 at interface level (toolbar / about / update / status bar; the report body stays English); the language panel adapts its column count to the screen, fonts are picked per writing system (Devanagari / Thai / Khmer / Myanmar / Georgian / Armenian / Ethiopic and more), and Hebrew / Persian / Urdu join the RTL mirror
 - **1.6.1** — Tiered language dropdown: the five UN languages on top, then the major developed economies' languages, with a "More languages…" entry opening a one-screen grid for the rest; new `--langmenu` diagnostic
 - **1.6.0** — Automatic updates: after launch it checks the manifest on GitHub in the background; when a newer build exists an "Update" button appears in the toolbar, and clicking it downloads, verifies SHA-256, then swaps the exe and restarts. Failed checks pass silently, `--noupdate` turns it off
 - **1.5.0** — New About window (`F1` or the last toolbar button): two pixel animations, one on where the name comes from and one on what the tool does; both are embedded in the exe, nothing extra to download
@@ -169,12 +168,13 @@ The output is `src\bin\Release\net48\Laocoon.exe`.
 ## Source layout
 
 - `src/Laocoon.cs` — the program, ~3,191 lines, all Win32 P/Invoke, no NuGet packages at all
-- `src/Lang.cs` — language core (enum, detection, font, width, lookup, fallback) and all twelve phrase tables in one file, about 2,611 lines
+- `src/Lang.cs` — language core (enum, detection, font, width, lookup, fallback) and all twelve phrase tables in one file, about 2,762 lines
+`src/LangExtra.cs` — phrase rows for the 49 interface-level languages (one row per language, 38 entries), about 120 lines
 - `src/Update.cs` — the update module: version comparison, manifest parsing, download with SHA-256 verification, the self-replace script and the update window, about 1,195 lines
 - `src/Laocoon.ico` — the pixel icon itself (8 sizes, 16–256), generated from a 16-cell master grid by `tools/make_icon.py`
 - `docs/img/*.gif` — the two pixel animations in this README, drawn frame by frame by `tools/make_gifs.py` (8 colours, 160×90 grid, integer scaling)
 
-Each table has 159 keys, all compiled into the exe. No `.resources`, no satellite assemblies — so it runs on any Win10/11 machine without ever falling back to English for a "missing language pack".
+Each full table has 155 keys (interface-level languages carry the 38 core entries), all compiled into the exe. No `.resources`, no satellite assemblies — so it runs on any Win10/11 machine without ever falling back to English for a "missing language pack".
 
 Main entry points:
 - `Probe.HitTest` — walks top-level windows in z-order itself for hit testing (not `WindowFromPoint`, so it never hits its own overlay)
@@ -188,9 +188,9 @@ Main entry points:
 ```
 Laocoon.exe --selftest out.txt     capture the console window, print the report, write it to a file
 Laocoon.exe --aimtest              self-test hit testing and the aiming overlay
-Laocoon.exe --i18ncheck            check all 12 languages for missing keys, column width, fonts, direction
+Laocoon.exe --i18ncheck            check all 61 languages for missing keys, column width, fonts, direction
 Laocoon.exe --langswitch           walk through every language, verify UI text and report follow
-Laocoon.exe --focustest f.log [shot.png]  cycle through all 12 languages, check the picker keeps focus
+Laocoon.exe --focustest f.log [shot.png]  cycle through all 61 languages, check the picker keeps focus
 Laocoon.exe --langstress 300 [log] [--rtl] simulate key-repeat switching, check handle rebuilds and resource stability
 Laocoon.exe --biditest out.png     side-by-side of 8 bidi layouts (Arabic + Latin data)
 Laocoon.exe --lang=ru              start in a given language (not written to the ini)
@@ -205,4 +205,4 @@ Laocoon.exe --updateplan new.exe old.exe [page]  write the replace script only, 
 Laocoon.exe --updateshot out.png [--lang=xx] [--state=dl|fail]  render the update window
 ```
 
-Combining `--lang=` with `--uishot` renders all twelve UIs in one pass for a visual check.
+Combining `--lang=` with `--uishot` renders all 61 UIs in one pass for a visual check.

@@ -1276,10 +1276,11 @@ namespace Laocoon
     // 无边框 + Owner 跟随主窗口 + 点外面即收起，标准弹出面板的做派。
     internal sealed class OtherLangForm : Form
     {
-        const int CardW = 136, CardH = 38, Gap = 8, Pad = 14, TitleH = 28;
+        const int CardW = 140, CardH = 38, Gap = 8, Pad = 14, TitleH = 28;
 
         readonly Action<LangId> _pick;
         readonly List<LangId> _ids = new List<LangId>();
+        readonly List<Button> _cards = new List<Button>();
         DateTime _shownAt;
 
         public OtherLangForm(LangId[] ids, Action<LangId> onPick)
@@ -1296,16 +1297,15 @@ namespace Laocoon
             // 只翻文字方向，不翻布局：位置和描边都是自己算的，再镜像一次就叠反了
             RightToLeft = L.IsRtl ? RightToLeft.Yes : RightToLeft.No;
 
-            int cols = _ids.Count <= 4 ? Math.Max(1, _ids.Count) : 4;
-            int rows = (_ids.Count + cols - 1) / cols;
-            ClientSize = new Size(Pad * 2 + cols * CardW + Math.Max(0, cols - 1) * Gap,
-                                  Pad * 2 + TitleH + rows * CardH + Math.Max(0, rows - 1) * Gap);
+            // 列数在 ShowNear 里按工作区自适应，正常一屏放得下；
+            // 不用 AutoScroll —— 无边框弹出窗一激活就会把内容滚到焦点控件处，
+            // 表现为面板被横移一格，露出一块空白
 
-            for (int i = 0; i < _ids.Count; i++)
+            foreach (LangId id in _ids)
             {
-                LangId id = _ids[i];
+                LangId captured = id;
                 Button b = new Button();
-                b.Text = L.Native(id);
+                b.Text = L.Native(captured);
                 b.FlatStyle = FlatStyle.Flat;
                 b.FlatAppearance.BorderSize = 1;
                 b.FlatAppearance.BorderColor = Color.FromArgb(219, 225, 234);
@@ -1314,15 +1314,47 @@ namespace Laocoon
                 b.ForeColor = Color.FromArgb(31, 41, 55);
                 b.Font = Font;
                 b.Cursor = Cursors.Hand;
+                b.Click += delegate { if (_pick != null) _pick(captured); Close(); };
+                Controls.Add(b);
+                _cards.Add(b);
+            }
+        }
 
+        internal Rectangle CardBounds(int i)
+        {
+            return i >= 0 && i < _cards.Count ? _cards[i].Bounds : Rectangle.Empty;
+        }
+
+        // 按工作区排成多行多列：列数随可用宽度长，行数随之变少，一屏能点完
+        void Arrange(Rectangle wa)
+        {
+            int maxW = Math.Max(CardW + Pad * 2, (int)(wa.Width * 0.92));
+            int maxH = Math.Max(CardH * 3, (int)(wa.Height * 0.82));
+
+            int cols = (maxW - Pad * 2 + Gap) / (CardW + Gap);
+            cols = Math.Max(1, Math.Min(7, Math.Min(cols, _cards.Count)));
+            int rows = (_cards.Count + cols - 1) / cols;
+            if (rows * (CardH + Gap) > maxH)
+            {
+                // 太矮就把列数拉起来，宁可宽一点也别让用户滚
+                int fit = Math.Max(1, (maxH - Pad * 2 - TitleH + Gap) / (CardH + Gap));
+                cols = Math.Max(cols, Math.Min(10, (_cards.Count + fit - 1) / fit));
+                rows = (_cards.Count + cols - 1) / cols;
+            }
+
+            int w = Pad * 2 + cols * CardW + Math.Max(0, cols - 1) * Gap;
+            int h = Pad * 2 + TitleH + rows * CardH + Math.Max(0, rows - 1) * Gap;
+
+            ClientSize = new Size(w, Math.Min(h, maxH));
+
+            for (int i = 0; i < _cards.Count; i++)
+            {
                 int col = i % cols, row = i / cols;
                 int x = L.IsRtl
-                    ? ClientSize.Width - Pad - CardW - col * (CardW + Gap)
+                    ? w - Pad - CardW - col * (CardW + Gap)
                     : Pad + col * (CardW + Gap);
                 int y = Pad + TitleH + row * (CardH + Gap);
-                b.Bounds = new Rectangle(x, y, CardW, CardH);
-                b.Click += delegate { if (_pick != null) _pick(id); Close(); };
-                Controls.Add(b);
+                _cards[i].Bounds = new Rectangle(x, y, CardW, CardH);
             }
         }
 
@@ -1330,6 +1362,8 @@ namespace Laocoon
         {
             Owner = owner;
             Rectangle wa = Screen.FromControl(anchor).WorkingArea;
+            Arrange(wa);
+
             Point comboTop = anchor.PointToScreen(Point.Empty);
             Point below = anchor.PointToScreen(new Point(0, anchor.Height));
 
@@ -1702,7 +1736,16 @@ namespace Laocoon
             if (_otherLang != null && !_otherLang.IsDisposed)
             {
                 Rectangle b = _otherLang.Bounds;
-                Grab(Rectangle.Intersect(Rectangle.Inflate(b, 10, 10), wa), OtherPath(path));
+                Console.WriteLine("panel: bounds=" + b + " client=" + _otherLang.ClientSize
+                                  + " rtl=" + _otherLang.RightToLeft
+                                  + " card0=" + _otherLang.CardBounds(0)
+                                  + " cards=" + L.Tier3.Length);
+                // 直接让面板自己画：抓屏会把背后/旁边的窗口一起拍进来，不好分辨
+                using (Bitmap bmp = new Bitmap(_otherLang.Width, _otherLang.Height))
+                {
+                    _otherLang.DrawToBitmap(bmp, new Rectangle(0, 0, bmp.Width, bmp.Height));
+                    bmp.Save(OtherPath(path), ImageFormat.Png);
+                }
                 _otherLang.Close();
             }
             Pump(200);
@@ -3104,30 +3147,44 @@ namespace Laocoon
         static void I18nCheck()
         {
             try { Console.OutputEncoding = Encoding.UTF8; } catch { }
-            Console.WriteLine("total keys = " + L.KeyCount + "   languages = " + L.All.Length);
+            Console.WriteLine("total keys = " + L.KeyCount + "   languages = " + L.All.Length
+                              + "   core keys = " + L.Core.Length);
             bool ok = true;
+
+            // 行写坏了（字段数对不上）必须点名：否则整段译文会静默错位
+            if (L.BadRows.Count > 0)
+            {
+                ok = false;
+                foreach (string b in L.BadRows) Console.WriteLine("BAD ROW: " + b);
+            }
+
             foreach (LangId id in L.All)
             {
-                List<string> miss = L.Missing(id);
                 L.Set(id);
-                Console.WriteLine(string.Format("{0}  {1,-12}  labelCol={2,-3} font={3,-20} mono={4,-16} rtl={5,-5} pad={6,-5} missing={7}",
-                    L.Code(id), L.Native(id), L.LabelCol, L.UiFont, L.MonoFont,
-                    L.IsRtl, L.PadLabels, miss.Count));
-                Console.WriteLine(string.Format("      title=\"{0}\"  longest=\"{1}\" ({2})",
-                    L.T("app.title"), L.LongestLabel, L.LongestLabelWidth));
-                if (miss.Count > 0)
+                List<string> core = L.MissingCore(id);
+                Console.WriteLine(string.Format(
+                    "{0,-3} {1,-18} cov={2,3}%  col={3,-3} font={4,-20} mono={5,-16} rtl={6,-5} pad={7,-5} {8}",
+                    L.Code(id), L.Native(id), L.Coverage(id), L.LabelCol, L.UiFont, L.MonoFont,
+                    L.IsRtl, L.PadLabels, core.Count == 0 ? "ok" : ("CORE MISSING " + core.Count)));
+                Console.WriteLine("    title=\"" + L.T("app.title") + "\"");
+                if (core.Count > 0)
                 {
                     ok = false;
-                    foreach (string k in miss) Console.WriteLine("      MISSING: " + k);
+                    foreach (string c in core) Console.WriteLine("      MISSING: " + c);
                 }
             }
+
             Console.WriteLine("fonts present: YaHei=" + L.FontAvailable("Microsoft YaHei UI")
                 + " YuGothic=" + L.FontAvailable("Yu Gothic UI")
                 + " Malgun=" + L.FontAvailable("Malgun Gothic")
                 + " Nirmala=" + L.FontAvailable("Nirmala UI")
+                + " Leelawadee=" + L.FontAvailable("Leelawadee UI")
+                + " KhmerUI=" + L.FontAvailable("Khmer UI")
+                + " Myanmar=" + L.FontAvailable("Myanmar Text")
+                + " Nyala=" + L.FontAvailable("Nyala")
+                + " Sylfaen=" + L.FontAvailable("Sylfaen")
+                + " Mongol=" + L.FontAvailable("Mongolian Baiti")
                 + " Segoe=" + L.FontAvailable("Segoe UI")
-                + " MSGothic=" + L.FontAvailable("MS Gothic")
-                + " GulimChe=" + L.FontAvailable("GulimChe")
                 + " Consolas=" + L.FontAvailable("Consolas"));
             Console.WriteLine(ok ? "i18ncheck OK" : "i18ncheck FAILED");
             if (!ok) Environment.Exit(1);
