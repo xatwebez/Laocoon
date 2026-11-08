@@ -8,7 +8,7 @@
 > Dieses Werkzeug tut dasselbe: **stich in ein Fenster und höre, was darin verborgen ist.**
 
 <p align="center">
-  <img src="img/laocoon.gif" width="640" alt="Laokoon kommt von der Kopfseite des Pferdes und stößt seinen Speer in dessen Bauch; bewaffnete Männer springen aus der Bresche, ein Etikett benennt sie, und er weicht mit erhobenem Speer zurück">
+  <img src="img/laocoon.gif" width="640" alt="Laokoon kommt von der Kopfseite des Pferdes und stößt seinen Speer in dessen Bauch; bewaffnete Männer springen aus der Bresche, ein Etikett meldet OCCUPIED, worauf er mit erhobenem Speer zurückweicht">
 </p>
 
 Da ist ein Fenster, das Sie nicht kennen — vielleicht etwas Unangenehmes. `F2` drücken, Fadenkreuz darüberziehen, klicken. Es legt alles offen, was sich über dieses Fenster und den dahinterstehenden Prozess herausfinden lässt.

@@ -8,7 +8,7 @@
 > This tool does the same thing: **poke a window, and hear what it is hiding.**
 
 <p align="center">
-  <img src="img/laocoon.gif" width="640" alt="Laocoon walks in from the horse's head side and drives a spear into its belly; armed men leap out of the breach, a label names them, and he backs away with his spear raised">
+  <img src="img/laocoon.gif" width="640" alt="Laocoon walks in from the horse's head side and drives a spear into its belly; armed men leap out of the breach and a label reads OCCUPIED, so he backs away with his spear raised">
 </p>
 
 You see a window you don't recognise — possibly something nasty. Press `F2`, drag the crosshair onto it, click. It lays out everything it can dig up about that window and the process behind it.
