@@ -74,6 +74,8 @@ La capture est unique : rien ne se rafraîchit à intervalle régulier, rien ne 
 
 Pourquoi ces douze-là : les langues des cinq membres permanents du Conseil de sécurité de l'ONU comme base, plus l'**arabe** (la seule langue de travail de l'ONU absente de cette liste), l'**allemand / le portugais / le japonais / le coréen** (grandes économies et écosystèmes logiciels), l'**hindi** (le plus grand marché monolingue en population) et l'**italien** (culture européenne). Le turc, l'indonésien, le vietnamien et le polonais ne sont pas là — le point d'extension existe : ajouter une langue = ajouter une table dans `Lang.cs`.
 
+La liste déroulante est **à étages** : en haut les cinq langues de l'ONU, un séparateur, puis les langues des grandes économies développées (allemand / japonais / coréen / italien / portugais), et en dessous une entrée « Autres langues… » qui ouvre un petit panneau en grille avec les restantes sur un seul écran — l'arabe et le hindi y vivent désormais. Les langues courantes ne demandent aucun défilement, et toute langue ajoutée plus tard atterrira toute seule dans ce panneau.
+
 Au premier lancement, la langue est choisie dans cet ordre :
 
 ```
@@ -139,6 +141,7 @@ Le manifeste et l'exe sortent du même passage de CI, le hachage y est calculé 
 
 ## Journal des versions
 
+- **1.6.1** — Liste de langues à étages : les cinq langues ONU en haut, puis les grandes économies développées, et une entrée « Autres langues… » qui ouvre une grille d'un écran pour le reste ; nouveau diagnostic `--langmenu`
 - **1.6.0** — Mise à jour automatique : au lancement, comparaison en arrière-plan avec le manifeste GitHub ; si une version plus récente existe, un bouton « Mettre à jour » apparaît — un clic télécharge, vérifie le SHA-256, remplace l'exe et redémarre. Une vérification ratée passe en silence, `--noupdate` la désactive
 - **1.5.0** — Nouvelle fenêtre « À propos » (`F1` ou le dernier bouton de la barre) : deux animations pixel, l'une sur l'origine du nom, l'autre sur ce que fait l'outil ; elles sont incluses dans l'exe, rien à télécharger
 - **1.4.4** — Correction d'un plantage occasionnel lors d'un changement de langue rapide en maintenant une flèche : la recréation des handles de fenêtre n'a plus lieu dans le traitement des messages de la liste, et le miroir RTL attend le relâchement des touches
@@ -171,7 +174,7 @@ Le résultat est `src\bin\Release\net48\Laocoon.exe`.
 - `src/Laocoon.ico` — l'icône pixel art elle-même (8 tailles, 16 à 256), générée depuis une grille 16×16 par `tools/make_icon.py`
 - `docs/img/*.gif` — les deux animations pixel de ce README, dessinées image par image par `tools/make_gifs.py` (8 couleurs, grille 160×90, agrandissement entier)
 
-Chaque table compte 157 clés, toutes compilées dans l'exe. Pas de `.resources`, pas de satellite assembly : sur n'importe quelle machine Win10/11 tout fonctionne sans « pack de langue manquant, repli sur l'anglais ».
+Chaque table compte 159 clés, toutes compilées dans l'exe. Pas de `.resources`, pas de satellite assembly : sur n'importe quelle machine Win10/11 tout fonctionne sans « pack de langue manquant, repli sur l'anglais ».
 
 Points d'entrée principaux :
 - `Probe.HitTest` — parcourt lui-même les fenêtres de premier niveau dans l'ordre z (pas `WindowFromPoint`, pour ne jamais toucher sa propre surcouche)
@@ -195,6 +198,7 @@ Laocoon.exe --uishot out.png --lang=ar            rendre l'interface en PNG
 Laocoon.exe --uishot out.png --lang=ar --welcome  page d'accueil seulement
 Laocoon.exe --uishot out.png --lang=ar --screen   capture d'écran (DrawToBitmap simule une sélection en RTL)
 Laocoon.exe --aboutshot out.png [--lang=xx]  rendre la fenêtre « À propos » (les deux animations avancent de quelques images)
+Laocoon.exe --langmenu out.png [--lang=xx]  capturer la liste de langues ouverte et le panneau de second niveau
 Laocoon.exe --updatecheck [url|chemin]  exécuter la vraie vérification et afficher la comparaison
 Laocoon.exe --updatefetch url out.exe  télécharger et vérifier, dire si le sha256 correspond
 Laocoon.exe --updateplan new.exe old.exe [page]  écrire seulement le script de remplacement, pour relire chemins et échappements

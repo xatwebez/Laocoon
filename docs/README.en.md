@@ -74,6 +74,8 @@ Capturing is one-shot: nothing refreshes on a timer, nothing sits in the backgro
 
 How the twelve were chosen: the five permanent members of the UN Security Council as the base, plus **Arabic** (the one UN working language that list misses), **German / Portuguese / Japanese / Korean** (major economies and software ecosystems), **Hindi** (the largest single-language market by population) and **Italian** (European culture). Turkish, Indonesian, Vietnamese and Polish are not included — the extension point is there, adding one means one more table in `Lang.cs`.
 
+The dropdown is **tiered**: the five UN languages on top, a separator, then the languages of the major developed economies (German / Japanese / Korean / Italian / Portuguese), and below that a "More languages…" entry that opens a small grid panel with the rest on one screen — Arabic and Hindi live there now. Everyday languages never need scrolling, and any language added later lands in that panel automatically.
+
 On first run the language is decided in this order:
 
 ```
@@ -139,6 +141,7 @@ The manifest and the exe come out of the same CI run and the hash is computed th
 
 ## Changelog
 
+- **1.6.1** — Tiered language dropdown: the five UN languages on top, then the major developed economies' languages, with a "More languages…" entry opening a one-screen grid for the rest; new `--langmenu` diagnostic
 - **1.6.0** — Automatic updates: after launch it checks the manifest on GitHub in the background; when a newer build exists an "Update" button appears in the toolbar, and clicking it downloads, verifies SHA-256, then swaps the exe and restarts. Failed checks pass silently, `--noupdate` turns it off
 - **1.5.0** — New About window (`F1` or the last toolbar button): two pixel animations, one on where the name comes from and one on what the tool does; both are embedded in the exe, nothing extra to download
 - **1.4.4** — Fixed an occasional crash when holding an arrow key to switch languages fast: the window-handle rebuild no longer happens inside the picker's own message handling, and the RTL flip waits until the keys are released
@@ -171,7 +174,7 @@ The output is `src\bin\Release\net48\Laocoon.exe`.
 - `src/Laocoon.ico` — the pixel icon itself (8 sizes, 16–256), generated from a 16-cell master grid by `tools/make_icon.py`
 - `docs/img/*.gif` — the two pixel animations in this README, drawn frame by frame by `tools/make_gifs.py` (8 colours, 160×90 grid, integer scaling)
 
-Each table has 157 keys, all compiled into the exe. No `.resources`, no satellite assemblies — so it runs on any Win10/11 machine without ever falling back to English for a "missing language pack".
+Each table has 159 keys, all compiled into the exe. No `.resources`, no satellite assemblies — so it runs on any Win10/11 machine without ever falling back to English for a "missing language pack".
 
 Main entry points:
 - `Probe.HitTest` — walks top-level windows in z-order itself for hit testing (not `WindowFromPoint`, so it never hits its own overlay)
@@ -195,6 +198,7 @@ Laocoon.exe --uishot out.png --lang=ar            render the UI to a PNG
 Laocoon.exe --uishot out.png --lang=ar --welcome  render the welcome page only
 Laocoon.exe --uishot out.png --lang=ar --screen   grab the screen instead (DrawToBitmap fakes a selection in RTL boxes)
 Laocoon.exe --aboutshot out.png [--lang=xx]  render the About window (both animations run a few frames)
+Laocoon.exe --langmenu out.png [--lang=xx]  capture the open language dropdown and the second-level panel
 Laocoon.exe --updatecheck [url|path]  run the real check once and print the comparison
 Laocoon.exe --updatefetch url out.exe  download and verify; print whether sha256 matches
 Laocoon.exe --updateplan new.exe old.exe [page]  write the replace script only, to inspect paths and quoting

@@ -74,6 +74,8 @@ L'acquisizione è una tantum: niente si aggiorna a intervalli, niente resta in b
 
 Perché proprio queste dodici: le lingue dei cinque membri permanenti del Consiglio di sicurezza dell'ONU come base, più **arabo** (l'unica lingua di lavoro ONU che manca in quella lista), **tedesco / portoghese / giapponese / coreano** (grandi economie ed ecosistemi software), **hindi** (il maggior mercato monolingue per popolazione) e **italiano** (cultura europea). Turco, indonesiano, vietnamita e polacco non ci sono — il punto di estensione resta aperto: aggiungere una lingua significa aggiungere una tabella in `Lang.cs`.
 
+Il menu a tendina è **a livelli**: in alto le cinque lingue ONU, un separatore e poi quelle delle grandi economie sviluppate (tedesco / giapponese / coreano / italiano / portoghese); sotto, la voce «Altre lingue…» apre un piccolo pannello a griglia con le restanti in un'unica schermata — arabo e hindi vivono lì ormai. Le lingue di tutti i giorni non chiedono scorrimenti, e ogni lingua aggiunta dopo finirà da sola in quel pannello.
+
 Al primo avvio la lingua viene decisa in quest'ordine:
 
 ```
@@ -139,6 +141,7 @@ Manifest ed exe escono dalla stessa esecuzione di CI e l'hash è calcolato lì: 
 
 ## Cronologia versioni
 
+- **1.6.1** — Menu delle lingue a livelli: le cinque lingue ONU in alto, poi le grandi economie sviluppate, e «Altre lingue…» apre una griglia con il resto in una schermata; nuovo flag diagnostico `--langmenu`
 - **1.6.0** — Aggiornamento automatico: all'avvio confronta in background il manifest su GitHub; se c'è una versione più recente appare il pulsante «Aggiorna» — un clic scarica, verifica lo SHA-256, sostituisce l'exe e riavvia. Un controllo fallito passa in silenzio, `--noupdate` lo disattiva
 - **1.5.0** — Nuova finestra «Informazioni» (`F1` o l'ultimo pulsante della barra): due animazioni pixel, una sul nome e una sulle funzioni; sono incluse nell'exe, niente da scaricare
 - **1.4.4** — Corretto un arresto anomalo occasionale cambiando lingua rapidamente con la freccia premuta: la ricreazione degli handle di finestra non avviene più dentro la gestione dei messaggi della casella, e lo specchio RTL attende il rilascio dei tasti
@@ -171,7 +174,7 @@ Il risultato è in `src\bin\Release\net48\Laocoon.exe`.
 - `src/Laocoon.ico` — l'icona pixel art stessa (8 dimensioni, da 16 a 256), generata da una griglia 16×16 con `tools/make_icon.py`
 - `docs/img/*.gif` — le due animazioni pixel di questo README, disegnate fotogramma per fotogramma da `tools/make_gifs.py` (8 colori, griglia 160×90, ingrandimento intero)
 
-Ogni tabella ha 157 chiavi, tutte compilate nell'exe. Niente `.resources`, niente satellite assembly: su qualsiasi macchina Win10/11 funziona subito, senza «pacchetto lingua mancante, ripiego sull'inglese».
+Ogni tabella ha 159 chiavi, tutte compilate nell'exe. Niente `.resources`, niente satellite assembly: su qualsiasi macchina Win10/11 funziona subito, senza «pacchetto lingua mancante, ripiego sull'inglese».
 
 Punti di ingresso principali:
 - `Probe.HitTest` — percorre da sé le finestre di primo livello in ordine z (non `WindowFromPoint`, per non colpire mai il proprio overlay)
@@ -195,6 +198,7 @@ Laocoon.exe --uishot out.png --lang=ar            rendere l'interfaccia in PNG
 Laocoon.exe --uishot out.png --lang=ar --welcome  solo la pagina di benvenuto
 Laocoon.exe --uishot out.png --lang=ar --screen   catturare lo schermo (DrawToBitmap simula una selezione in RTL)
 Laocoon.exe --aboutshot out.png [--lang=xx]  renderizza la finestra «Informazioni» (le animazioni avanzano di alcuni fotogrammi)
+Laocoon.exe --langmenu out.png [--lang=xx]  acquisire la lista lingue aperta e il pannello di secondo livello
 Laocoon.exe --updatecheck [url|percorso]  eseguire il controllo reale e stampare il confronto
 Laocoon.exe --updatefetch url out.exe  scaricare e verificare; dire se lo sha256 coincide
 Laocoon.exe --updateplan new.exe old.exe [page]  scrivere solo lo script di sostituzione, per rivedere percorsi ed escape

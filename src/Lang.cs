@@ -31,6 +31,36 @@ namespace Laocoon
             LangId.Ar, LangId.De, LangId.Pt, LangId.Ja, LangId.Ko, LangId.Hi, LangId.It
         };
 
+        // 语言选择器的分层：一级下拉先给五常，接一条分隔线，再给主要发达国家，
+        // 其余收进二级面板（一屏铺开点选）—— 常用的几条不用翻，剩下的一条也不占地方。
+        //
+        // 分组只在这两个数组里表达：没登记的一律自动落进 Tier3，
+        // 所以以后加语言照旧只要补一张表，不必回来改这里。想让某个语言换层，
+        // 把它在两个数组之间挪一下即可（葡萄牙语放在 Tier2 是按葡萄牙算发达国家；
+        // 若按"使用人口"重排，它和阿拉伯语该对调）。
+        public static readonly LangId[] Tier1 = new LangId[]
+        {
+            LangId.Zh, LangId.En, LangId.Ru, LangId.Fr, LangId.Es
+        };
+
+        public static readonly LangId[] Tier2 = new LangId[]
+        {
+            LangId.De, LangId.Ja, LangId.Ko, LangId.It, LangId.Pt
+        };
+
+        public static readonly LangId[] Tier3 = Tier3Build();
+
+        static LangId[] Tier3Build()
+        {
+            List<LangId> rest = new List<LangId>();
+            foreach (LangId id in All)
+                if (Array.IndexOf(Tier1, id) < 0 && Array.IndexOf(Tier2, id) < 0) rest.Add(id);
+            return rest.ToArray();
+        }
+
+        // 枚举值目前正好等于在 All 里的下标，但别指望这件事 —— 各处一律走这个函数
+        public static int AllIndex(LangId id) { return Array.IndexOf(All, id); }
+
         static readonly Dictionary<string, string> _en = En();
         static Dictionary<string, string> _cur = _en;
         static LangId _id = LangId.En;
@@ -382,6 +412,8 @@ namespace Laocoon
                 "upd.checking", "正在检查更新…",
                 "st.updateavail", "发现新版本 {0}，点「更新」安装",
                 "st.lang", "语言",
+                "ui.lang.more", "其他语言…",
+                "ui.lang.other", "其他语言",
 
                 "st.ready", "就绪 — 按 F2 开始瞄准",
                 "st.cleared", "已清空",
@@ -571,6 +603,8 @@ namespace Laocoon
                 "upd.checking", "Checking for updates…",
                 "st.updateavail", "Version {0} is available — click Update to install",
                 "st.lang", "Language",
+                "ui.lang.more", "More languages…",
+                "ui.lang.other", "More languages",
 
                 "st.ready", "Ready — press F2 to aim",
                 "st.cleared", "Cleared",
@@ -760,6 +794,8 @@ namespace Laocoon
                 "upd.checking", "Проверка обновлений…",
                 "st.updateavail", "Доступна версия {0} — нажмите «Обновить»",
                 "st.lang", "Язык",
+                "ui.lang.more", "Другие языки…",
+                "ui.lang.other", "Другие языки",
 
                 "st.ready", "Готово — нажмите F2, чтобы прицелиться",
                 "st.cleared", "Очищено",
@@ -949,6 +985,8 @@ namespace Laocoon
                 "upd.checking", "Recherche de mise à jour…",
                 "st.updateavail", "Version {0} disponible — cliquez sur Mettre à jour",
                 "st.lang", "Langue",
+                "ui.lang.more", "Autres langues…",
+                "ui.lang.other", "Autres langues",
 
                 "st.ready", "Prêt — appuyez sur F2 pour viser",
                 "st.cleared", "Effacé",
@@ -1138,6 +1176,8 @@ namespace Laocoon
                 "upd.checking", "Buscando actualizaciones…",
                 "st.updateavail", "Versión {0} disponible: pulsa Actualizar",
                 "st.lang", "Idioma",
+                "ui.lang.more", "Más idiomas…",
+                "ui.lang.other", "Más idiomas",
 
                 "st.ready", "Listo — pulsa F2 para apuntar",
                 "st.cleared", "Borrado",
@@ -1327,6 +1367,8 @@ namespace Laocoon
                 "upd.checking", "جارٍ التحقق من التحديثات…",
                 "st.updateavail", "الإصدار {0} متاح — اضغط «تحديث» للتثبيت",
                 "st.lang", "اللغة",
+                "ui.lang.more", "لغات أخرى…",
+                "ui.lang.other", "لغات أخرى",
 
                 "st.ready", "جاهز — اضغط F2 للتصويب",
                 "st.cleared", "تم المسح",
@@ -1518,6 +1560,8 @@ namespace Laocoon
                 "upd.checking", "Suche nach Aktualisierungen…",
                 "st.updateavail", "Version {0} verfügbar — zum Installieren auf Aktualisieren klicken",
                 "st.lang", "Sprache",
+                "ui.lang.more", "Weitere Sprachen…",
+                "ui.lang.other", "Weitere Sprachen",
 
                 "st.ready", "Bereit — F2 zum Anvisieren",
                 "st.cleared", "Geleert",
@@ -1707,6 +1751,8 @@ namespace Laocoon
                 "upd.checking", "Verificando atualizações…",
                 "st.updateavail", "Versão {0} disponível — clique em Atualizar",
                 "st.lang", "Idioma",
+                "ui.lang.more", "Mais idiomas…",
+                "ui.lang.other", "Mais idiomas",
 
                 "st.ready", "Pronto — pressione F2 para mirar",
                 "st.cleared", "Limpo",
@@ -1896,6 +1942,8 @@ namespace Laocoon
                 "upd.checking", "更新を確認しています…",
                 "st.updateavail", "バージョン {0} があります — 「更新」を押してインストール",
                 "st.lang", "言語",
+                "ui.lang.more", "その他の言語…",
+                "ui.lang.other", "その他の言語",
 
                 "st.ready", "準備完了 — F2 で照準を開始",
                 "st.cleared", "クリアしました",
@@ -2085,6 +2133,8 @@ namespace Laocoon
                 "upd.checking", "업데이트 확인 중…",
                 "st.updateavail", "버전 {0} 사용 가능 — '업데이트'를 눌러 설치",
                 "st.lang", "언어",
+                "ui.lang.more", "기타 언어…",
+                "ui.lang.other", "기타 언어",
 
                 "st.ready", "준비됨 — F2 를 눌러 조준 시작",
                 "st.cleared", "지웠습니다",
@@ -2274,6 +2324,8 @@ namespace Laocoon
                 "upd.checking", "अपडेट की जाँच हो रही है…",
                 "st.updateavail", "संस्करण {0} उपलब्ध — इंस्टॉल करने के लिए अपडेट दबाएँ",
                 "st.lang", "भाषा",
+                "ui.lang.more", "अन्य भाषाएँ…",
+                "ui.lang.other", "अन्य भाषाएँ",
 
                 "st.ready", "तैयार — निशाना लगाने के लिए F2 दबाएँ",
                 "st.cleared", "साफ़ कर दिया",
@@ -2463,6 +2515,8 @@ namespace Laocoon
                 "upd.checking", "Controllo aggiornamenti…",
                 "st.updateavail", "Versione {0} disponibile — premi Aggiorna per installarla",
                 "st.lang", "Lingua",
+                "ui.lang.more", "Altre lingue…",
+                "ui.lang.other", "Altre lingue",
 
                 "st.ready", "Pronto — premi F2 per mirare",
                 "st.cleared", "Pulito",

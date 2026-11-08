@@ -1096,6 +1096,300 @@ namespace Laocoon
 
     #endregion
 
+    #region ---------- 语言选择器 ----------
+
+    // 字体缓存放这儿：主窗口和二级面板都要用，各管各的 new Font 只会把 GDI 句柄越攒越多
+    internal static class Fonts
+    {
+        static readonly Dictionary<string, Font> _cache = new Dictionary<string, Font>();
+
+        public static Font Get(string family, float size)
+        {
+            string key = family + "|" + size.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            Font f;
+            if (_cache.TryGetValue(key, out f) && f != null) return f;
+            f = new Font(family, size);
+            _cache[key] = f;
+            return f;
+        }
+    }
+
+    // 一级：带分隔线和「其他语言…」入口的自绘下拉框。
+    //
+    // 为什么还是 ComboBox：切到 / 切回阿拉伯语会翻 RightToLeftLayout，窗体连同子控件重建句柄，
+    // 焦点返还、下拉列表收起这些时序全压在它身上（见 MainForm.OnLangChanged 的注释）。
+    // 换成自造控件等于把那些坑重踩一遍，所以这里只加一层自绘，不动它的消息路径。
+    internal sealed class LangCombo : ComboBox
+    {
+        public const int Separator = -1;   // 画一条线，不可选
+        public const int More = -2;        // 「其他语言…」，点了展开二级面板
+
+        // 序号 → L.All 下标；分隔线与「其他」记负数
+        readonly List<int> _map = new List<int>();
+
+        int _lastValid = -1;
+        bool _moving;           // 程序自己挪选择时，不对外发事件
+
+        public event EventHandler MoreClicked;
+
+        public LangCombo()
+        {
+            DropDownStyle = ComboBoxStyle.DropDownList;
+            DrawMode = DrawMode.OwnerDrawFixed;
+            ItemHeight = 23;
+            IntegralHeight = false;    // 否则 DropDownHeight 会被"整行"改回去
+            MaxDropDownItems = 14;
+            DropDownWidth = 200;       // 比收起时的宽度宽一点，长语言名在列表里能看全
+        }
+
+        public int SelectedLang { get { int i = SelectedIndex; return (i >= 0 && i < _map.Count) ? _map[i] : -1; } }
+
+        // 整张列表按分层重建。14 行而已，重建比增删维护简单，也不会留下错位的旧行。
+        public void Rebuild(int cur, string moreText)
+        {
+            // 行高跟着字体走：印地语 / 日文字形比拉丁系高，写死 23 会削掉下伸部
+            ItemHeight = Math.Max(21, Font.Height + 5);
+            _moving = true;
+            try
+            {
+                if (DroppedDown) DroppedDown = false;
+                Items.Clear();
+                _map.Clear();
+                _lastValid = -1;
+
+                foreach (LangId id in L.Tier1) Add(L.AllIndex(id), L.Native(id));
+                Add(Separator, "");
+                foreach (LangId id in L.Tier2) Add(L.AllIndex(id), L.Native(id));
+                Add(Separator, "");
+                Add(More, moreText);
+                if (cur >= 0 && !_map.Contains(cur))
+                {
+                    // 当前语言在二级面板里：就在「其他语言…」下面补一行把它显示出来，
+                    // 否则下拉框会停在一个跟界面语言对不上的条目上。
+                    Add(cur, L.Native(L.All[cur]));
+                }
+
+                int i = _map.IndexOf(cur);
+                SelectedIndex = i >= 0 ? i : 0;
+                _lastValid = SelectedIndex;
+            }
+            finally { _moving = false; }
+        }
+
+        void Add(int allIndex, string text)
+        {
+            _map.Add(allIndex);
+            Items.Add(text);
+        }
+
+        public void SelectLang(int allIndex)
+        {
+            int i = _map.IndexOf(allIndex);
+            if (i >= 0 && SelectedIndex != i) SelectedIndex = i;
+        }
+
+        public bool HasLang(int allIndex) { return _map.IndexOf(allIndex) >= 0; }
+
+        protected override void OnDrawItem(DrawItemEventArgs e)
+        {
+            e.DrawBackground();
+            if (e.Index < 0 || e.Index >= _map.Count) return;
+
+            int kind = _map[e.Index];
+            Rectangle r = e.Bounds;
+
+            if (kind == Separator)
+            {
+                int y = r.Top + r.Height / 2;
+                using (Pen p = new Pen(Color.FromArgb(206, 213, 224)))
+                    e.Graphics.DrawLine(p, r.Left + 6, y, r.Right - 6, y);
+                return;
+            }
+
+            bool sel = (e.State & DrawItemState.Selected) != 0;
+            bool rtl = RightToLeft == RightToLeft.Yes;
+            bool more = kind == More;
+
+            Color fg = sel ? SystemColors.HighlightText
+                           : (more ? Color.FromArgb(37, 99, 235) : Color.FromArgb(31, 41, 55));
+            Rectangle tr = new Rectangle(r.Left + 8, r.Top, r.Width - 24, r.Height);
+            TextRenderer.DrawText(e.Graphics, Items[e.Index].ToString(), Font, tr, fg,
+                TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix
+                | TextFormatFlags.EndEllipsis
+                | (rtl ? TextFormatFlags.Right : TextFormatFlags.Left));
+
+            if (more)
+            {
+                // 小三角：后面还有一层。位置跟书写方向走，别画反
+                int mid = r.Top + r.Height / 2;
+                int cx = rtl ? r.Left + 9 : r.Right - 15;
+                using (SolidBrush b = new SolidBrush(sel ? SystemColors.HighlightText : Color.FromArgb(148, 163, 184)))
+                {
+                    Point[] tri = rtl
+                        ? new Point[] { new Point(cx + 4, mid - 4), new Point(cx + 4, mid + 4), new Point(cx, mid) }
+                        : new Point[] { new Point(cx, mid - 4), new Point(cx, mid + 4), new Point(cx + 4, mid) };
+                    e.Graphics.FillPolygon(b, tri);
+                }
+            }
+        }
+
+        // 分隔线和「其他」不能变成当前语言：前者顺着方向跳过去，后者退回原选项再展开面板。
+        // 方向键和鼠标走的是同一条路，逻辑只写一遍。
+        protected override void OnSelectedIndexChanged(EventArgs e)
+        {
+            if (_moving) return;                       // 内部搬动选择，不对外发事件
+
+            int i = SelectedIndex;
+            if (i < 0 || i >= _map.Count) { base.OnSelectedIndexChanged(e); return; }
+
+            int kind = _map[i];
+            if (kind >= 0)
+            {
+                _lastValid = i;
+                base.OnSelectedIndexChanged(e);
+                return;
+            }
+
+            if (kind == More)
+            {
+                _moving = true;
+                try { if (_lastValid >= 0) SelectedIndex = _lastValid; }
+                finally { _moving = false; }
+                if (DroppedDown) DroppedDown = false;
+                EventHandler h = MoreClicked;
+                if (h != null) h(this, EventArgs.Empty);
+                return;
+            }
+
+            // 分隔线：按本次移动的方向再跨一格，别让方向键卡在线上
+            int dir = i > _lastValid ? 1 : -1;
+            int j = i;
+            while (j >= 0 && j < _map.Count && _map[j] < 0) j += dir;
+            if (j < 0 || j >= _map.Count) j = _lastValid;   // 到头了，原地不动
+            _moving = true;
+            try { if (j >= 0 && j != i) SelectedIndex = j; }
+            finally { _moving = false; }
+        }
+    }
+
+    // 二级面板：把「其他」里的语言铺成几行几列，一屏看全，点一下就切。
+    // 无边框 + Owner 跟随主窗口 + 点外面即收起，标准弹出面板的做派。
+    internal sealed class OtherLangForm : Form
+    {
+        const int CardW = 136, CardH = 38, Gap = 8, Pad = 14, TitleH = 28;
+
+        readonly Action<LangId> _pick;
+        readonly List<LangId> _ids = new List<LangId>();
+        DateTime _shownAt;
+
+        public OtherLangForm(LangId[] ids, Action<LangId> onPick)
+        {
+            _pick = onPick;
+            if (ids != null) _ids.AddRange(ids);
+
+            FormBorderStyle = FormBorderStyle.None;
+            StartPosition = FormStartPosition.Manual;
+            ShowInTaskbar = false;
+            KeyPreview = true;
+            BackColor = Color.White;
+            Font = Fonts.Get(L.UiFont, 9F);
+            // 只翻文字方向，不翻布局：位置和描边都是自己算的，再镜像一次就叠反了
+            RightToLeft = L.IsRtl ? RightToLeft.Yes : RightToLeft.No;
+
+            int cols = _ids.Count <= 4 ? Math.Max(1, _ids.Count) : 4;
+            int rows = (_ids.Count + cols - 1) / cols;
+            ClientSize = new Size(Pad * 2 + cols * CardW + Math.Max(0, cols - 1) * Gap,
+                                  Pad * 2 + TitleH + rows * CardH + Math.Max(0, rows - 1) * Gap);
+
+            for (int i = 0; i < _ids.Count; i++)
+            {
+                LangId id = _ids[i];
+                Button b = new Button();
+                b.Text = L.Native(id);
+                b.FlatStyle = FlatStyle.Flat;
+                b.FlatAppearance.BorderSize = 1;
+                b.FlatAppearance.BorderColor = Color.FromArgb(219, 225, 234);
+                b.FlatAppearance.MouseOverBackColor = Color.FromArgb(238, 244, 255);
+                b.BackColor = Color.White;
+                b.ForeColor = Color.FromArgb(31, 41, 55);
+                b.Font = Font;
+                b.Cursor = Cursors.Hand;
+
+                int col = i % cols, row = i / cols;
+                int x = L.IsRtl
+                    ? ClientSize.Width - Pad - CardW - col * (CardW + Gap)
+                    : Pad + col * (CardW + Gap);
+                int y = Pad + TitleH + row * (CardH + Gap);
+                b.Bounds = new Rectangle(x, y, CardW, CardH);
+                b.Click += delegate { if (_pick != null) _pick(id); Close(); };
+                Controls.Add(b);
+            }
+        }
+
+        public void ShowNear(Form owner, Control anchor)
+        {
+            Owner = owner;
+            Rectangle wa = Screen.FromControl(anchor).WorkingArea;
+            Point comboTop = anchor.PointToScreen(Point.Empty);
+            Point below = anchor.PointToScreen(new Point(0, anchor.Height));
+
+            int x = L.IsRtl ? below.X + anchor.Width - Width : below.X;
+            int y = below.Y + 4;
+            // 语言框在状态栏里，正下方就是屏幕边：放不下就翻到上面去
+            if (y + Height > wa.Bottom) y = comboTop.Y - Height - 4;
+            x = Math.Max(wa.Left + 8, Math.Min(x, wa.Right - Width - 8));
+            y = Math.Max(wa.Top + 8, Math.Min(y, wa.Bottom - Height - 8));
+
+            Location = new Point(x, y);
+            _shownAt = DateTime.Now;
+            Show();
+            Activate();
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            using (Pen p = new Pen(Color.FromArgb(214, 220, 230)))
+                e.Graphics.DrawRectangle(p, 0, 0, ClientSize.Width - 1, ClientSize.Height - 1);
+
+            int lineY = Pad + TitleH - 10;
+            using (Pen p = new Pen(Color.FromArgb(236, 240, 246)))
+                e.Graphics.DrawLine(p, Pad, lineY, ClientSize.Width - Pad, lineY);
+
+            TextRenderer.DrawText(e.Graphics, L.T("ui.lang.other"), Fonts.Get(L.UiFont, 9F),
+                new Rectangle(Pad, 4, ClientSize.Width - Pad * 2, TitleH - 8),
+                Color.FromArgb(107, 114, 128),
+                TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix
+                | (L.IsRtl ? TextFormatFlags.Right : TextFormatFlags.Left));
+        }
+
+        // 点窗口外面、切走焦点就收起。刚弹出那一下会先收到一次失活，按时间挡掉。
+        protected override void OnDeactivate(EventArgs e)
+        {
+            base.OnDeactivate(e);
+            if ((DateTime.Now - _shownAt).TotalMilliseconds < 200) return;
+            Close();
+        }
+
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Escape) { Close(); return; }
+            base.OnKeyDown(e);
+        }
+
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                CreateParams cp = base.CreateParams;
+                cp.ClassStyle |= 0x00020000;   // CS_DROPSHADOW：跟真正的菜单一样带一点投影
+                return cp;
+            }
+        }
+    }
+
+    #endregion
+
     #region ---------- 主窗口 ----------
 
     public class MainForm : Form
@@ -1112,7 +1406,8 @@ namespace Laocoon
         readonly Button _bAbout = new Button();
         readonly Button _bUpdate = new Button();
         readonly Label _lblLang = new Label();
-        readonly ComboBox _cboLang = new ComboBox();
+        readonly LangCombo _cboLang = new LangCombo();
+        OtherLangForm _otherLang;
 
         // 更新：后台查一次，有新版本才亮按钮；点了按钮才弹窗，启动时不打断
         UpdateAgent _updates;
@@ -1140,17 +1435,7 @@ namespace Laocoon
 
         // 字体按族名缓存：每切一次语言就 new 一个 Font 会造成不必要的 GDI 对象周转，
         // 而 Font 是不可变的，同族同号的实例可以共用（进程内最多十几种）。
-        static readonly Dictionary<string, Font> _fontCache = new Dictionary<string, Font>();
-
-        static Font CachedFont(string family, float size)
-        {
-            string key = family + "|" + size.ToString(System.Globalization.CultureInfo.InvariantCulture);
-            Font f;
-            if (_fontCache.TryGetValue(key, out f) && f != null) return f;
-            f = new Font(family, size);
-            _fontCache[key] = f;
-            return f;
-        }
+        static Font CachedFont(string family, float size) { return Fonts.Get(family, size); }
 
         public MainForm()
         {
@@ -1263,11 +1548,11 @@ namespace Laocoon
             _lblLang.Margin = new Padding(0, 8, 6, 0);
             _lblLang.ForeColor = Color.FromArgb(140, 148, 164);
 
-            _cboLang.DropDownStyle = ComboBoxStyle.DropDownList;
-            _cboLang.Width = 112;
+            _cboLang.Width = 150;
             _cboLang.Margin = new Padding(0, 4, 6, 0);
-            foreach (LangId lid in L.All) _cboLang.Items.Add(L.Native(lid));
-            _cboLang.SelectedIndex = Array.IndexOf(L.All, L.Current);
+            _cboLang.Rebuild(L.AllIndex(L.Current), L.T("ui.lang.more"));
+            // 晚一拍再开面板：此刻还在下拉框处理点选的调用栈里，让它先把手头收完
+            _cboLang.MoreClicked += delegate { try { BeginInvoke((MethodInvoker)ShowOtherLangs); } catch { } };
             _cboLang.SelectedIndexChanged += delegate { OnLangChanged(); };
 
             FlowLayoutPanel langBar = new FlowLayoutPanel();
@@ -1284,7 +1569,7 @@ namespace Laocoon
             statusPanel.ColumnCount = 2;
             statusPanel.RowCount = 1;
             statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 200F));
+            statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 236F));
             statusPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             statusPanel.Controls.Add(_st, 0, 0);
             statusPanel.Controls.Add(langBar, 1, 0);
@@ -1359,8 +1644,91 @@ namespace Laocoon
         {
             _dirTimer.Stop();
             _dirTimer.Dispose();
+            if (_otherLang != null) { _otherLang.Close(); _otherLang = null; }
             if (_updates != null) { _updates.Dispose(); _updates = null; }
             base.OnFormClosed(e);
+        }
+
+        // 一级里只放常用的那些，其余的语言在这个面板里一屏铺开点选。
+        // 面板是无边框非模态窗口：点外面 / Esc / 选完都收起。
+        void ShowOtherLangs()
+        {
+            if (!_ready || L.Tier3.Length == 0) return;
+            if (_otherLang != null && !_otherLang.IsDisposed) { _otherLang.Close(); return; }
+
+            OtherLangForm f = new OtherLangForm(L.Tier3, delegate(LangId id)
+            {
+                // 从面板选中的语言不在下拉框里，直接落地；注意这里是同步回调，
+                // 面板随后才 Close，所以不能在这里依赖它已经关掉
+                _langKeepFocus = true;
+                _pendingLang = L.AllIndex(id);
+                ApplyPendingLang();
+            });
+            f.FormClosed += delegate { _otherLang = null; };
+            _otherLang = f;
+            f.ShowNear(this, _cboLang);
+        }
+
+        // 诊断用：绕开"必须在面板里点"的限制，直接把语言落到界面
+        internal void ForceLang(LangId id)
+        {
+            _langKeepFocus = true;
+            _pendingLang = L.AllIndex(id);
+            ApplyPendingLang();
+        }
+
+        // 诊断用：一级下拉展开的样子、二级面板各截一张，人工核对排版与方向。
+        // 下拉列表和面板都是独立顶层窗口，DrawToBitmap 抓不到，只能抓屏。
+        internal void LangMenuShot(string path)
+        {
+            Rectangle combo = _cboLang.RectangleToScreen(_cboLang.ClientRectangle);
+            Rectangle wa = Screen.FromControl(_cboLang).WorkingArea;
+            // 列表朝哪边展开取决于窗口在屏幕里的位置（贴底就朝上，居中就朝下），
+            // 所以上下都留够 —— 14 行 × 23px ≈ 320px
+            Rectangle area = Rectangle.FromLTRB(
+                Math.Max(wa.Left, combo.Left - 40), Math.Max(wa.Top, combo.Top - 360),
+                Math.Min(wa.Right, combo.Right + 220), Math.Min(wa.Bottom, combo.Bottom + 360));
+
+            _cboLang.Focus();
+            Pump(600);
+            _cboLang.DroppedDown = true;
+            Pump(500);
+            Grab(area, path);
+            _cboLang.DroppedDown = false;
+            Pump(200);
+
+            ShowOtherLangs();
+            Pump(500);
+            if (_otherLang != null && !_otherLang.IsDisposed)
+            {
+                Rectangle b = _otherLang.Bounds;
+                Grab(Rectangle.Intersect(Rectangle.Inflate(b, 10, 10), wa), OtherPath(path));
+                _otherLang.Close();
+            }
+            Pump(200);
+        }
+
+        static string OtherPath(string path)
+        {
+            int dot = path.LastIndexOf('.');
+            return dot > 0 ? path.Substring(0, dot) + "_other" + path.Substring(dot) : path + "_other";
+        }
+
+        // 分段 pump 而不是一次 Sleep：Sleep 期间消息泵停着，计时器和窗口重绘都不会走
+        static void Pump(int ms)
+        {
+            for (int i = 0; i < ms; i += 50) { System.Threading.Thread.Sleep(Math.Min(50, ms - i)); Application.DoEvents(); }
+        }
+
+        static void Grab(Rectangle r, string path)
+        {
+            if (path.Length == 0 || r.Width <= 0 || r.Height <= 0) return;
+            using (Bitmap bmp = new Bitmap(r.Width, r.Height))
+            {
+                using (Graphics g = Graphics.FromImage(bmp))
+                    g.CopyFromScreen(r.Location, Point.Empty, r.Size);
+                bmp.Save(path, ImageFormat.Png);
+            }
         }
 
         // 语言切换后把所有界面文字重新贴一遍，并按新语言重排报告。
@@ -1389,9 +1757,9 @@ namespace Laocoon
                     : L.T("btn.update");
                 _lblLang.Text = L.T("st.lang");
 
-                // 下拉框跟随当前语言（选中项没变时不会触发事件，不必担心递归）
-                int idx = Array.IndexOf(L.All, L.Current);
-                if (idx >= 0 && _cboLang.SelectedIndex != idx) _cboLang.SelectedIndex = idx;
+                // 下拉框跟随当前语言（选中项没变时不会触发事件，不必担心递归）。
+                // 走 Rebuild 而不是只改选中项：切到二级面板里的语言时，得把那一行补出来。
+                _cboLang.Rebuild(L.AllIndex(L.Current), L.T("ui.lang.more"));
 
                 if (_report == null)
                 {
@@ -1418,8 +1786,8 @@ namespace Laocoon
         void OnLangChanged()
         {
             if (!_ready || _syncingLang) return;
-            int i = _cboLang.SelectedIndex;
-            if (i < 0 || i >= L.All.Length) return;
+            int i = _cboLang.SelectedLang;
+            if (i < 0) return;
 
             // 切到 / 切回阿拉伯语时句柄重建会让焦点掉到窗体上（甚至谁都没有），
             // 键盘切换就此断掉，而且断了就再也接不上。先记住焦点原本在下拉框上，切完再还给它。
@@ -1521,10 +1889,12 @@ namespace Laocoon
                 {
                     foreach (LangId id in L.All)
                     {
-                        int idx = Array.IndexOf(L.All, id);
-                        if (idx < 0 || _cboLang.SelectedIndex == idx) continue;
+                        if (L.Current == id) continue;
 
-                        _cboLang.SelectedIndex = idx;
+                        // 二级面板里的语言不在下拉框里，走 ForceLang 落地 ——
+                        // 这条探针盯的是"切完焦点还在不在"，不是"从哪儿点的"
+                        if (_cboLang.HasLang(L.AllIndex(id))) _cboLang.SelectLang(L.AllIndex(id));
+                        else ForceLang(id);
                         Application.DoEvents();
                         Application.DoEvents();     // 补焦点的 BeginInvoke 要再跑一轮
 
@@ -1541,13 +1911,13 @@ namespace Laocoon
                 // 第三阶段：列表展开着跨 RTL 边界 —— 焦点必须保住；
                 // 列表本身会被句柄重建收起来（刻意不重开，见 OnLangChanged 的注释）
                 w("-- 列表展开状态 --");
-                _cboLang.SelectedIndex = Array.IndexOf(L.All, LangId.Zh);
+                _cboLang.SelectLang(L.AllIndex(LangId.Zh));
                 Application.DoEvents();
                 _cboLang.DroppedDown = true;
                 Application.DoEvents();
                 w("  zh: dropped=" + _cboLang.DroppedDown + "  combo=" + _cboLang.Focused);
 
-                _cboLang.SelectedIndex = Array.IndexOf(L.All, LangId.Ar);
+                ForceLang(LangId.Ar);
                 Application.DoEvents();
                 Application.DoEvents();
                 w("  -> ar: dropped=" + _cboLang.DroppedDown + "  combo=" + _cboLang.Focused + "  (列表收起属预期)");
@@ -1568,7 +1938,7 @@ namespace Laocoon
                     catch (Exception ex) { w("  shot failed: " + ex.Message); }
                 }
 
-                _cboLang.SelectedIndex = Array.IndexOf(L.All, LangId.Zh);
+                _cboLang.SelectLang(L.AllIndex(LangId.Zh));
                 Application.DoEvents();
                 Application.DoEvents();
                 w("  -> zh: dropped=" + _cboLang.DroppedDown + "  combo=" + _cboLang.Focused);
@@ -1630,14 +2000,13 @@ namespace Laocoon
                 // 真人通常是"连按一阵、停一下、再连按"，所以按"连发 + 静默"的节奏模拟。
                 const int burstSize = 25, gapMs = 25, quietMs = 450;   // 奇数：每阵结束时停在阿语，便于核对方向
                 int bursts = Math.Max(1, count / burstSize);
-                int idxZh = Array.IndexOf(L.All, LangId.Zh);
-                int idxAr = Array.IndexOf(L.All, LangId.Ar);
+                int idxZh = L.AllIndex(LangId.Zh);
 
                 for (int b = 0; b < bursts; b++)
                 {
                     long tBurst = sw.ElapsedMilliseconds;
                     // 遍历模式：每阵都从列表头开始，保证这一阵真的会跨过阿拉伯语
-                    if (!rtlOnly) { _cboLang.SelectedIndex = 0; Application.DoEvents(); }
+                    if (!rtlOnly) { _cboLang.SelectLang(idxZh); Application.DoEvents(); }
                     w("  阵前 rtl=" + (RightToLeftLayout ? "y" : "n") + " lang=" + L.Code(L.Current)
                         + " handle=0x" + _cboLang.Handle.ToInt64().ToString("X"));
                     for (int k = 0; k < burstSize; k++)
@@ -1645,14 +2014,14 @@ namespace Laocoon
                         if (rtlOnly)
                         {
                             // 中/阿之间来回：每次切换都会改变镜像方向，是最狠的场景
-                            _cboLang.SelectedIndex = L.IsRtl ? idxZh : idxAr;
+                            if (L.IsRtl) _cboLang.SelectLang(idxZh); else ForceLang(LangId.Ar);
                             Application.DoEvents();
                             switched++;
                         }
                         else
                         {
                             int idx = _cboLang.SelectedIndex;
-                            bool down = idx < L.All.Length - 1;
+                            bool down = idx < _cboLang.Items.Count - 1;
                             Nat.PostMessage(_cboLang.Handle, 0x0100 /*WM_KEYDOWN*/,
                                 (IntPtr)(down ? 0x28 /*VK_DOWN*/ : 0x26 /*VK_UP*/), IntPtr.Zero);
                             Application.DoEvents();
@@ -2530,6 +2899,12 @@ namespace Laocoon
                 return;
             }
 
+            if (args.Length > 0 && args[0] == "--langmenu")
+            {
+                LangMenuShot(args.Length > 1 ? args[1] : "");
+                return;
+            }
+
             if (args.Length > 0 && args[0] == "--biditest")
             {
                 BidiTest(args.Length > 1 ? args[1] : "");
@@ -3116,6 +3491,24 @@ namespace Laocoon
                     }
                 }
                 f.Close();
+            }
+        }
+
+        // 诊断用：展开语言下拉 / 打开二级面板各截一张（都是独立窗口，只能抓屏）
+        static void LangMenuShot(string path)
+        {
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
+            using (MainForm f = new MainForm())
+            {
+                f.StartPosition = FormStartPosition.CenterScreen;
+                f.Show();
+                f.TopMost = true;
+                f.Activate();
+                Application.DoEvents();
+                for (int i = 0; i < 8; i++) { System.Threading.Thread.Sleep(80); Application.DoEvents(); }
+                f.LangMenuShot(path);
             }
         }
 

@@ -21,8 +21,8 @@
     <Product>Laocoön 拉奥孔</Product>
     <Company>Laocoön</Company>
     <Description>用准星戳一下窗口，听里面藏着什么：采集任意窗口及其所属进程的全部可辨识信息</Description>
-    <Version>1.6.0</Version>
-    <FileVersion>1.6.0.0</FileVersion>
+    <Version>1.6.1</Version>
+    <FileVersion>1.6.1.0</FileVersion>
     <NoWarn>CS0168;CS0219;CS0414;CS0649</NoWarn>
   </PropertyGroup>
 

@@ -74,6 +74,8 @@ Die Erfassung ist einmalig: nichts aktualisiert sich im Takt, nichts bleibt im H
 
 Warum genau diese zwölf: die Sprachen der fünf ständigen Mitglieder des UN-Sicherheitsrats als Basis, dazu **Arabisch** (die einzige UN-Arbeitssprache, die dort fehlt), **Deutsch / Portugiesisch / Japanisch / Koreanisch** (große Volkswirtschaften und Software-Ökosysteme), **Hindi** (zahlenmäßig größter einsprachiger Markt) und **Italienisch** (europäische Kultur). Türkisch, Indonesisch, Vietnamesisch und Polnisch fehlen — der Erweiterungspunkt bleibt offen: eine Sprache mehr heißt eine Tabelle mehr in `Lang.cs`.
 
+Die Auswahlliste ist **gestaffelt**: oben die fünf UN-Sprachen, eine Trennlinie, dann die Sprachen der großen Industrienationen (Deutsch / Japanisch / Koreanisch / Italienisch / Portugiesisch), darunter der Eintrag „Weitere Sprachen…“, der ein kleines Rasterfenster mit dem Rest öffnet — Arabisch und Hindi wohnen jetzt dort. Alltägliche Sprachen verlangen kein Scrollen, und jede später hinzugekommene landet von selbst in diesem Fenster.
+
 Beim ersten Start entscheidet diese Reihenfolge über die Sprache:
 
 ```
@@ -139,6 +141,7 @@ Manifest und EXE stammen aus demselben CI-Lauf, der Hash wird dort berechnet —
 
 ## Versionsverlauf
 
+- **1.6.1** — Gestaffelte Sprachauswahl: oben die fünf UN-Sprachen, dann die großen Industrienationen, und „Weitere Sprachen…“ öffnet ein Rasterfenster mit dem Rest; neuer Diagnoseschalter `--langmenu`
 - **1.6.0** — Automatische Updates: nach dem Start gleicht das Programm im Hintergrund das Manifest auf GitHub ab; gibt es eine neuere Version, erscheint eine Schaltfläche „Aktualisieren“ — ein Klick lädt herunter, prüft den SHA-256, tauscht die EXE und startet neu. Eine fehlgeschlagene Prüfung läuft still, `--noupdate` schaltet sie ab
 - **1.5.0** — Neues Fenster „Info“ (`F1` oder die letzte Schaltfläche in der Leiste): zwei Pixel-Animationen zu Namen und Aufgabe; beide stecken in der EXE, es ist nichts nachzuladen
 - **1.4.4** — Gelegentlicher Absturz beim schnellen Sprachwechsel per gehaltener Pfeiltaste behoben: Die Neuerzeugung der Fenster-Handles passiert nicht mehr in der Nachrichtenbehandlung der Auswahlliste, und die RTL-Spiegelung wartet, bis die Tasten losgelassen sind
@@ -171,7 +174,7 @@ Das Ergebnis liegt in `src\bin\Release\net48\Laocoon.exe`.
 - `src/Laocoon.ico` — das Pixel-Icon selbst (8 Größen, 16–256), erzeugt aus einem 16×16-Raster von `tools/make_icon.py`
 - `docs/img/*.gif` — die beiden Pixel-Animationen dieser README, Bild für Bild von `tools/make_gifs.py` gezeichnet (8 Farben, 160×90-Raster, ganzzahlige Skalierung)
 
-Jede Tabelle hat 157 Schlüssel, alle in die exe kompiliert. Keine `.resources`, keine Satellite Assemblies — auf jedem Win10/11-Rechner läuft es sofort, ohne „Sprachpaket fehlt, Rückfall auf Englisch“.
+Jede Tabelle hat 159 Schlüssel, alle in die exe kompiliert. Keine `.resources`, keine Satellite Assemblies — auf jedem Win10/11-Rechner läuft es sofort, ohne „Sprachpaket fehlt, Rückfall auf Englisch“.
 
 Zentrale Einstiegspunkte:
 - `Probe.HitTest` — läuft die Fenster oberster Ebene selbst in z-Reihenfolge ab (nicht `WindowFromPoint`, damit es nie die eigene Überlagerung trifft)
@@ -195,6 +198,7 @@ Laocoon.exe --uishot out.png --lang=ar            Oberfläche als PNG rendern
 Laocoon.exe --uishot out.png --lang=ar --welcome  nur die Begrüßungsseite
 Laocoon.exe --uishot out.png --lang=ar --screen   Bildschirm abgreifen (DrawToBitmap malt in RTL-Feldern eine falsche Auswahl)
 Laocoon.exe --aboutshot out.png [--lang=xx]  das Info-Fenster rendern (beide Animationen laufen einige Bilder weiter)
+Laocoon.exe --langmenu out.png [--lang=xx]  die offene Sprachliste und das Fenster der zweiten Ebene aufnehmen
 Laocoon.exe --updatecheck [url|Pfad]  die echte Prüfung einmal durchlaufen und den Vergleich ausgeben
 Laocoon.exe --updatefetch url out.exe  herunterladen und prüfen; melden, ob der sha256 passt
 Laocoon.exe --updateplan new.exe old.exe [page]  nur das Austauschskript schreiben, um Pfade und Quoting zu prüfen

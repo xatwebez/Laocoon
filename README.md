@@ -76,6 +76,10 @@
 **德语 / 葡萄牙语 / 日语 / 韩语**（主要经济体和软件生态）、**印地语**（人口最大的单一语言市场）、
 **意大利语**（欧洲文化圈）。土耳其语、印尼语、越南语、波兰语这些没有加——留了扩展位，加一种只要在 `Lang.cs` 里补一张表。
 
+下拉框是**分级**的：五常语言在最上面，一条分隔线之后是主要发达国家的语言（德 / 日 / 韩 / 意 / 葡），
+再往下「其他语言…」展开一个多行多列的小面板，剩下的语言一屏铺开点选 —— 阿拉伯语和印地语现在就在那里。
+常用的语言不用翻列表，不常用的也不占地方；以后加新语言会自动落进那个面板。
+
 首次运行按下面的顺序决定语言：
 
 ```
@@ -149,6 +153,7 @@
 
 ## 更新记录
 
+- **1.6.1** — 语言下拉框分级：五常在上、分隔线后是主要发达国家的语言，「其他语言…」展开二级面板一屏铺开点选；新增 `--langmenu` 诊断开关
 - **1.6.0** — 自动更新：启动后后台比对 GitHub 上的清单，有新版本时工具栏出现「更新」按钮，点击即下载、校验 SHA-256、退出后自动替换并重启；检查失败静默跳过，`--noupdate` 可关
 - **1.5.0** — 新增「关于」窗口（按 `F1` 或点工具栏最后一个按钮）：两段像素动画分别讲名字的来历和它做的事；动画内嵌在 exe 里，不额外下载任何文件
 - **1.4.4** — 修复按住方向键连续切换语言时偶发崩溃：整窗句柄重建不再发生在下拉框的消息处理里，且改为松开按键后才翻转镜像
@@ -181,7 +186,7 @@ dotnet build src\Laocoon.csproj -c Release
 - `src/Laocoon.ico` —— 像素图标本身（16~256 共 8 个尺寸），由 `tools/make_icon.py` 用 16 格母版生成
 - `docs/img/*.gif` —— README 里的两段像素动画，由 `tools/make_gifs.py` 逐帧程序化生成（8 色、160×90 网格、整数倍放大）
 
-每张表 157 个键，全部编译进 exe，不生成 `.resources`、不生成 satellite assembly，
+每张表 159 个键，全部编译进 exe，不生成 `.resources`、不生成 satellite assembly，
 所以拷到任何一台 Win10/11 上都能直接用，不会出现“缺语言包退回英文”。
 
 主要入口：
@@ -206,6 +211,7 @@ Laocoon.exe --uishot out.png --lang=ar            渲染界面截图
 Laocoon.exe --uishot out.png --lang=ar --welcome  只渲染说明页
 Laocoon.exe --uishot out.png --lang=ar --screen   改用屏幕抓取（DrawToBitmap 对 RTL 文本框会画出假选区）
 Laocoon.exe --aboutshot out.png [--lang=xx]  渲染「关于」窗口（两段动画会各自走几帧）
+Laocoon.exe --langmenu out.png [--lang=xx]  展开语言下拉 / 二级面板各截一张
 Laocoon.exe --updatecheck [url|路径]  走一遍真实检查链路，打印版本对比结果
 Laocoon.exe --updatefetch url out.exe 下载并校验，打印 sha256 是否一致
 Laocoon.exe --updateplan new.exe old.exe [page]  只生成替换脚本，人工核对路径与转义

@@ -74,6 +74,8 @@ La captura es única: nada se refresca por temporizador, nada se queda en segund
 
 Por qué estos doce: los idiomas de los cinco miembros permanentes del Consejo de Seguridad de la ONU como base, más el **árabe** (el único idioma de trabajo de la ONU que falta en esa lista), **alemán / portugués / japonés / coreano** (grandes economías y ecosistemas de software), **hindi** (el mayor mercado monolingüe por población) e **italiano** (cultura europea). Turco, indonesio, vietnamita y polaco no están: el punto de extensión queda abierto, añadir uno es añadir una tabla en `Lang.cs`.
 
+El desplegable es **por niveles**: arriba los cinco idiomas de la ONU, un separador y después los de las grandes economías desarrolladas (alemán / japonés / coreano / italiano / portugués); debajo, la entrada «Más idiomas…» abre un pequeño panel en cuadrícula con el resto en una sola pantalla — el árabe y el hindi viven ahí ahora. Los idiomas habituales no hacen scroll, y cualquier idioma que se añada después caerá solo en ese panel.
+
 En el primer arranque el idioma se decide en este orden:
 
 ```
@@ -139,6 +141,7 @@ El manifiesto y el exe salen de la misma ejecución de CI y el hash se calcula a
 
 ## Historial de versiones
 
+- **1.6.1** — Desplegable de idiomas por niveles: los cinco de la ONU arriba, luego las grandes economías desarrolladas y «Más idiomas…», que abre una cuadrícula de una pantalla con el resto; nuevo diagnóstico `--langmenu`
 - **1.6.0** — Actualización automática: al arrancar compara en segundo plano el manifiesto de GitHub; si hay una versión más nueva aparece un botón «Actualizar» — al pulsarlo descarga, verifica el SHA-256, sustituye el exe y se reinicia. Una comprobación fallida pasa en silencio, `--noupdate` la desactiva
 - **1.5.0** — Nueva ventana «Acerca de» (`F1` o el último botón de la barra): dos animaciones pixel, una sobre el origen del nombre y otra sobre lo que hace; van incluidas en el exe, nada extra que descargar
 - **1.4.4** — Corregido un cierre inesperado ocasional al cambiar de idioma rápido manteniendo una flecha: la recreación de los identificadores de ventana ya no ocurre dentro del manejo de mensajes del desplegable, y el espejo RTL espera a que se suelten las teclas
@@ -171,7 +174,7 @@ El resultado queda en `src\bin\Release\net48\Laocoon.exe`.
 - `src/Laocoon.ico` — el icono pixel art (8 tamaños, 16 a 256), generado desde una rejilla de 16×16 con `tools/make_icon.py`
 - `docs/img/*.gif` — las dos animaciones pixel de este README, dibujadas fotograma a fotograma por `tools/make_gifs.py` (8 colores, rejilla 160×90, escalado entero)
 
-Cada tabla tiene 157 claves, todas compiladas dentro del exe. Sin `.resources` ni satellite assemblies: en cualquier máquina Win10/11 funciona sin «falta el paquete de idioma, vuelvo al inglés».
+Cada tabla tiene 159 claves, todas compiladas dentro del exe. Sin `.resources` ni satellite assemblies: en cualquier máquina Win10/11 funciona sin «falta el paquete de idioma, vuelvo al inglés».
 
 Puntos de entrada principales:
 - `Probe.HitTest` — recorre él mismo las ventanas de nivel superior en orden z (no usa `WindowFromPoint`, para no acertar en su propia capa)
@@ -195,6 +198,7 @@ Laocoon.exe --uishot out.png --lang=ar            renderizar la interfaz a PNG
 Laocoon.exe --uishot out.png --lang=ar --welcome  solo la página de bienvenida
 Laocoon.exe --uishot out.png --lang=ar --screen   capturar la pantalla (DrawToBitmap simula una selección en RTL)
 Laocoon.exe --aboutshot out.png [--lang=xx]  renderizar la ventana «Acerca de» (las animaciones avanzan unos fotogramas)
+Laocoon.exe --langmenu out.png [--lang=xx]  capturar el desplegable de idiomas abierto y el panel de segundo nivel
 Laocoon.exe --updatecheck [url|ruta]  ejecutar la comprobación real e imprimir la comparación
 Laocoon.exe --updatefetch url out.exe  descargar y verificar; indicar si el sha256 coincide
 Laocoon.exe --updateplan new.exe old.exe [page]  escribir solo el script de reemplazo, para revisar rutas y escapes
