@@ -7,13 +7,28 @@
 >
 > Cet outil fait exactement la même chose : **pique une fenêtre, écoute ce qu'elle cache.**
 
+## Un peu de contexte : il n'a pas sauvé Troie
+
+Laocoon était prêtre de Troie. Il se méfiait du cheval de bois, enfonça sa lance dans son ventre et pressa la ville de le brûler.
+
+Il n'a convaincu personne. Les dieux étaient du côté des Grecs : deux serpents marins sortirent de l'eau et l'étouffèrent avec ses deux fils sur la plage.
+Les Troyens y virent la preuve qu'il avait offensé le ciel, et rentrèrent le cheval avec plus de tranquillité. La nuit, les soldats cachés ouvrirent les portes, et Troie tomba.
+
+C'est le point le moins romantique de l'histoire : **il avait raison, mais il n'a convaincu personne et n'a pas vécu assez longtemps pour le voir confirmé.**
+
+C'est aussi la place que prend cet outil. Il ne juge pas à votre place et ne conclut rien. Il étale sur la table ce qu'on peut lire d'une fenêtre et de son processus : chemins, signatures, modules chargés, contrôles enfants, et quelques points qui lui paraissent suspects.
+
+Ce qui est vraiment suspect, s'il faut agir, s'il faut le signaler, s'il s'agissait d'une fausse alerte — c'est à vous de trancher. Il peut se tromper aussi : les « points suspects » sont des heuristiques, pas des verdicts.
+
+Le rapport est une liste de faits, pas un jugement. Regardez bien, puis agissez prudemment.
+
 <p align="center">
   <img src="img/laocoon.gif" width="640" alt="Laocoon arrive du côté de la tête du cheval et enfonce sa lance dans son ventre ; des guerriers armés jaillissent de la brèche, une étiquette affiche OCCUPIED, et il recule, lance levée">
 </p>
 
 Vous voyez une fenêtre que vous ne reconnaissez pas — peut-être quelque chose de douteux. Appuyez sur `F2`, amenez le réticule dessus, cliquez. Il déroule tout ce qu'on peut extraire de cette fenêtre et du processus qui la porte.
 
-- Un seul fichier `Laocoon.exe`, environ **208 Ko**
+- Un seul fichier `Laocoon.exe`, environ **346 Ko**
 - Aucune dépendance tierce — uniquement le .NET Framework 4.x fourni avec Windows (Win10 / Win11, rien à installer)
 - Pas de réseau, pas d'envoi, pas d'écriture dans le registre, aucun fichier de configuration, pas d'agent en arrière-plan (on décompresse, on lance — rien ne reste sur le disque)
 - Douze langues intégrées : **中文 / English / Русский / Français / Español / العربية / Deutsch / Português / 日本語 / 한국어 / हिन्दी / Italiano**
@@ -107,6 +122,7 @@ Le rapport entier est du texte brut : colonnes alignées, sections séparées �
 
 ## Journal des versions
 
+- **1.5.0** — Nouvelle fenêtre « À propos » (`F1` ou le dernier bouton de la barre) : deux animations pixel, l'une sur l'origine du nom, l'autre sur ce que fait l'outil ; elles sont incluses dans l'exe, rien à télécharger
 - **1.4.4** — Correction d'un plantage occasionnel lors d'un changement de langue rapide en maintenant une flèche : la recréation des handles de fenêtre n'a plus lieu dans le traitement des messages de la liste, et le miroir RTL attend le relâchement des touches
 - **1.4.3** — Fin de `Laocoon.ini` : la langue suit le système, un changement manuel ne vaut que pour la session, et le programme ne laisse aucun fichier
 - **1.4.2** — Les trois fichiers de langues réunis en un seul `Lang.cs` ; simple rangement, aucun changement d'interface ni de texte
@@ -159,6 +175,7 @@ Laocoon.exe --lang=ru              démarrer dans une langue donnée (non écrit
 Laocoon.exe --uishot out.png --lang=ar            rendre l'interface en PNG
 Laocoon.exe --uishot out.png --lang=ar --welcome  page d'accueil seulement
 Laocoon.exe --uishot out.png --lang=ar --screen   capture d'écran (DrawToBitmap simule une sélection en RTL)
+Laocoon.exe --aboutshot out.png [--lang=xx]  rendre la fenêtre « À propos » (les deux animations avancent de quelques images)
 ```
 
 Combiné à `--lang=`, `--uishot` rend les douze interfaces d'un coup pour un contrôle visuel.

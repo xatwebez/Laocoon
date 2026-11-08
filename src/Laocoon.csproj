@@ -21,8 +21,8 @@
     <Product>Laocoön 拉奥孔</Product>
     <Company>Laocoön</Company>
     <Description>用准星戳一下窗口，听里面藏着什么：采集任意窗口及其所属进程的全部可辨识信息</Description>
-    <Version>1.4.4</Version>
-    <FileVersion>1.4.4.0</FileVersion>
+    <Version>1.5.0</Version>
+    <FileVersion>1.5.0.0</FileVersion>
     <NoWarn>CS0168;CS0219;CS0414;CS0649</NoWarn>
   </PropertyGroup>
 
@@ -34,6 +34,14 @@
   <ItemGroup>
     <EmbeddedResource Include="Laocoon.ico">
       <LogicalName>Laocoon.ico</LogicalName>
+    </EmbeddedResource>
+    <!-- 两段像素动画，「关于」窗口里播放。都来自 docs/img，源文件只有一份，
+         由 tools/make_gifs.py 生成；这里只是嵌入，不在仓库里再留副本。 -->
+    <EmbeddedResource Include="..\docs\img\laocoon.gif">
+      <LogicalName>Laocoon.origin.gif</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\docs\img\detect.gif">
+      <LogicalName>Laocoon.detect.gif</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
 

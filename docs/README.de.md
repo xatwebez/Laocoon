@@ -7,13 +7,28 @@
 >
 > Dieses Werkzeug tut dasselbe: **stich in ein Fenster und höre, was darin verborgen ist.**
 
+## Ein wenig Hintergrund: er hat Troja nicht gerettet
+
+Laokoon war Priester in Troja. Er misstraute dem hölzernen Pferd, stieß seinen Speer in dessen Bauch und drang darauf, es zu verbrennen.
+
+Überzeugt hat er niemanden. Die Götter standen auf der Seite der Griechen: Zwei Seeschlangen stiegen aus dem Wasser und erdrückten ihn und seine beiden Söhne am Strand.
+Die Trojaner deuteten das als Strafe für Frevel und zogen das Pferd erst recht beruhigt in die Stadt. In der Nacht öffneten die versteckten Krieger die Tore, und Troja fiel.
+
+Das ist der am wenigsten romantische Teil der Geschichte: **Er hatte recht, aber er überzeugte niemanden und erlebte die Bestätigung nicht mehr.**
+
+Genau dort steht auch dieses Werkzeug. Es urteilt nicht für dich und zieht keine Schlüsse. Es legt auf den Tisch, was sich aus einem Fenster und seinem Prozess ablesen lässt: Pfade, Signaturen, geladene Module, untergeordnete Steuerelemente und ein paar Stellen, die ihm verdächtig vorkommen.
+
+Was wirklich verdächtig ist, ob man handeln sollte, ob es gemeldet gehört, ob es ein Fehlalarm war — das entscheidest du. Es kann sich auch irren: Die „Verdachtshinweise“ sind Heuristiken, keine Urteile.
+
+Der Bericht ist eine Liste von Tatsachen, kein Urteil. Sieh genau hin, und handle dann besonnen.
+
 <p align="center">
   <img src="img/laocoon.gif" width="640" alt="Laokoon kommt von der Kopfseite des Pferdes und stößt seinen Speer in dessen Bauch; bewaffnete Männer springen aus der Bresche, ein Etikett meldet OCCUPIED, worauf er mit erhobenem Speer zurückweicht">
 </p>
 
 Da ist ein Fenster, das Sie nicht kennen — vielleicht etwas Unangenehmes. `F2` drücken, Fadenkreuz darüberziehen, klicken. Es legt alles offen, was sich über dieses Fenster und den dahinterstehenden Prozess herausfinden lässt.
 
-- Einzelne Datei `Laocoon.exe`, etwa **208 KB**
+- Einzelne Datei `Laocoon.exe`, etwa **346 KB**
 - Keine Fremdabhängigkeiten — nur das .NET Framework 4.x, das Windows mitbringt (Win10 / Win11, nichts zu installieren)
 - Kein Netz, kein Upload, keine Registry-Einträge, keine Konfigurationsdatei, kein Hintergrunddienst (entpacken, starten — nichts bleibt auf der Platte)
 - Zwölf Sprachen eingebaut: **中文 / English / Русский / Français / Español / العربية / Deutsch / Português / 日本語 / 한국어 / हिन्दी / Italiano**
@@ -107,6 +122,7 @@ Der ganze Bericht ist reiner Text: Spalten sind ausgerichtet, Abschnitte getrenn
 
 ## Versionsverlauf
 
+- **1.5.0** — Neues Fenster „Info“ (`F1` oder die letzte Schaltfläche in der Leiste): zwei Pixel-Animationen zu Namen und Aufgabe; beide stecken in der EXE, es ist nichts nachzuladen
 - **1.4.4** — Gelegentlicher Absturz beim schnellen Sprachwechsel per gehaltener Pfeiltaste behoben: Die Neuerzeugung der Fenster-Handles passiert nicht mehr in der Nachrichtenbehandlung der Auswahlliste, und die RTL-Spiegelung wartet, bis die Tasten losgelassen sind
 - **1.4.3** — Keine `Laocoon.ini` mehr: die Sprache folgt dem System, manuelles Umschalten gilt nur für den laufenden Start, und es bleibt keine Datei zurück
 - **1.4.2** — Die drei Sprachdateien zu einer `Lang.cs` zusammengelegt; reine Aufräumarbeit, Oberfläche und Texte unverändert
@@ -159,6 +175,7 @@ Laocoon.exe --lang=ru              in einer bestimmten Sprache starten (schreibt
 Laocoon.exe --uishot out.png --lang=ar            Oberfläche als PNG rendern
 Laocoon.exe --uishot out.png --lang=ar --welcome  nur die Begrüßungsseite
 Laocoon.exe --uishot out.png --lang=ar --screen   Bildschirm abgreifen (DrawToBitmap malt in RTL-Feldern eine falsche Auswahl)
+Laocoon.exe --aboutshot out.png [--lang=xx]  das Info-Fenster rendern (beide Animationen laufen einige Bilder weiter)
 ```
 
 Zusammen mit `--lang=` rendert `--uishot` alle zwölf Oberflächen in einem Durchgang zur Sichtprüfung.

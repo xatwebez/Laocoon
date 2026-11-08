@@ -7,13 +7,28 @@
 >
 > Esta ferramenta faz o mesmo: **espetar uma janela e ouvir o que ela esconde.**
 
+## Um pouco de contexto: ele não salvou Troia
+
+Laocoonte era sacerdote de Troia. Desconfiou do cavalo de madeira, cravou a lança no ventre e insistiu que a cidade o queimasse.
+
+Não convenceu ninguém. Os deuses estavam do lado dos gregos: duas serpentes marinhas saíram da água e o sufocaram com os dois filhos na praia.
+Os troianos viram nisso a prova de que ele ofendera o céu, e recolheram o cavalo com mais tranquilidade. Naquela noite os soldados escondidos abriram os portões, e Troia caiu.
+
+É a parte menos romântica da história: **ele estava certo, mas não convenceu ninguém nem viveu para ver a confirmação.**
+
+É aí que esta ferramenta se posiciona. Ela não julga por você nem tira conclusões. Só põe sobre a mesa o que dá para ler de uma janela e do seu processo: caminhos, assinaturas, módulos carregados, controles filhos e alguns pontos que lhe parecem suspeitos.
+
+O que é de fato suspeito, se convém agir, se é caso de reportar, se foi alarme falso — a decisão é sua. Ela também pode errar: os "indícios" são heurísticas, não veredictos.
+
+O relatório é uma lista de fatos, não uma sentença. Olhe com atenção e aja com cautela.
+
 <p align="center">
   <img src="img/laocoon.gif" width="640" alt="Laocoonte chega pelo lado da cabeça do cavalo e crava a lança no ventre; guerreiros armados saltam pela abertura e uma etiqueta marca OCCUPIED, então ele recua com a lança erguida">
 </p>
 
 Você vê uma janela que não reconhece — talvez algo indesejado. Pressione `F2`, leve a mira até ela, clique. Ele despeja tudo o que dá para extrair daquela janela e do processo por trás dela.
 
-- Um único arquivo `Laocoon.exe`, cerca de **208 KB**
+- Um único arquivo `Laocoon.exe`, cerca de **346 KB**
 - Zero dependências de terceiros: apenas o .NET Framework 4.x que já vem com o Windows (Win10 / Win11, nada para instalar)
 - Sem rede, sem upload, sem escrever no registro, sem arquivo de configuração, sem agente em segundo plano (descompacta, executa e nada fica no disco)
 - Doze idiomas embutidos: **中文 / English / Русский / Français / Español / العربية / Deutsch / Português / 日本語 / 한국어 / हिन्दी / Italiano**
@@ -107,6 +122,7 @@ O relatório inteiro é texto puro: colunas alinhadas, seções separadas; dá p
 
 ## Histórico de versões
 
+- **1.5.0** — Nova janela «Sobre» (`F1` ou o último botão da barra): duas animações em pixel, uma sobre a origem do nome e outra sobre o que a ferramenta faz; ambas vêm dentro do exe, nada extra para baixar
 - **1.4.4** — Corrigido um encerramento inesperado ocasional ao trocar de idioma rapidamente com a seta pressionada: a recriação dos identificadores de janela já não acontece dentro do tratamento de mensagens da lista, e o espelhamento RTL espera que as teclas sejam soltas
 - **1.4.3** — Fim do `Laocoon.ini`: o idioma segue o sistema, a troca manual vale só para esta execução e o programa não deixa arquivo algum
 - **1.4.2** — Os três arquivos de idiomas unidos em um único `Lang.cs`; arrumação de código, sem mudanças de interface ou texto
@@ -159,6 +175,7 @@ Laocoon.exe --lang=ru              iniciar em um idioma específico (não grava 
 Laocoon.exe --uishot out.png --lang=ar            renderizar a interface em PNG
 Laocoon.exe --uishot out.png --lang=ar --welcome  apenas a página de boas-vindas
 Laocoon.exe --uishot out.png --lang=ar --screen   capturar a tela (DrawToBitmap simula seleção em RTL)
+Laocoon.exe --aboutshot out.png [--lang=xx]  renderizar a janela «Sobre» (as animações avançam alguns quadros)
 ```
 
 Combinado com `--lang=`, o `--uishot` renderiza as doze interfaces de uma vez para conferência visual.

@@ -7,6 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -1107,6 +1109,7 @@ namespace Laocoon
         readonly Button _bSave = new Button();
         readonly Button _bOpenLoc = new Button();
         readonly Button _bClear = new Button();
+        readonly Button _bAbout = new Button();
         readonly Label _lblLang = new Label();
         readonly ComboBox _cboLang = new ComboBox();
 
@@ -1214,6 +1217,13 @@ namespace Laocoon
                 SetStatus(L.T("st.cleared"));
             };
             bar.Controls.Add(_bClear);
+
+            // 「关于」放最右：不常用，但不能找不到
+            _bAbout.Text = L.T("btn.about");
+            _bAbout.MinimumSize = new Size(0, 32);
+            StyleButton(_bAbout, false);
+            _bAbout.Click += delegate { ShowAbout(); };
+            bar.Controls.Add(_bAbout);
 
             // 只剩一个内容区，不必再用标签页：白底面板 + 报告框填满
             Panel body = new Panel();
@@ -1345,6 +1355,7 @@ namespace Laocoon
                 _bSave.Text = L.T("btn.save");
                 _bOpenLoc.Text = L.T("btn.openloc");
                 _bClear.Text = L.T("btn.clear");
+                _bAbout.Text = L.T("btn.about");
                 _lblLang.Text = L.T("st.lang");
 
                 // 下拉框跟随当前语言（选中项没变时不会触发事件，不必担心递归）
@@ -1817,7 +1828,25 @@ namespace Laocoon
                 SetStatus(L.T("st.aimcancel"));
                 return true;
             }
+            if (keyData == Keys.F1)
+            {
+                ShowAbout();
+                return true;
+            }
             return base.ProcessCmdKey(ref msg, keyData);
+        }
+
+        // 「关于」：弹出模态框，两段像素动画各播各的。
+        // 瞄准过程中按 F1 也允许 —— 先把准星收回来，否则模态框一开，鼠标就再也点不到目标
+        void ShowAbout()
+        {
+            if (!_ready) return;
+            if (_aiming) EndAim();
+            try
+            {
+                using (AboutForm f = new AboutForm()) f.ShowDialog(this);
+            }
+            catch (Exception ex) { SetStatus(L.F("st.fail", ex.Message)); }
         }
 
         void CommitAim(Point p)
@@ -1939,6 +1968,366 @@ namespace Laocoon
 
     #endregion
 
+    #region ---------- 关于 ----------
+
+    // 像素动画播放器。自己逐帧画，既不用 ImageAnimator 也不用 PictureBox 的 GIF 支持：
+    //   1) GDI+ 会把「帧延迟小于 2/100 秒」一律当 100ms，节奏会被抹平；
+    //   2) PictureBox 缩放走双三次插值，像素画一放大就糊成水彩；
+    //   3) 自己画才能按控件尺寸等比放大，并固定用最近邻，边缘永远是硬边。
+    internal sealed class GifView : Control
+    {
+        const int DefaultDelay = 100;
+
+        Image _img;
+        Stream _src;            // GDI+ 是延迟解码的，源流必须活到图像释放为止
+        int _frames;
+        int[] _delay;
+        int _i;
+        readonly Timer _timer = new Timer();
+
+        public GifView()
+        {
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint
+                   | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+            BackColor = Color.FromArgb(23, 35, 59);     // 和动画底色同色，缩放的留白处不透白
+            TabStop = false;
+            _timer.Tick += delegate { Next(); };
+        }
+
+        public bool Load(string resource)
+        {
+            try
+            {
+                Stream res = typeof(GifView).Assembly.GetManifestResourceStream(resource);
+                if (res == null) return false;
+
+                MemoryStream ms = new MemoryStream();
+                res.CopyTo(ms);
+                res.Dispose();
+                ms.Position = 0;
+
+                Image img = Image.FromStream(ms, false, true);
+                int n = img.GetFrameCount(FrameDimension.Time);
+                if (n <= 0) { img.Dispose(); ms.Dispose(); return false; }
+
+                _img = img;
+                _src = ms;
+                _frames = n;
+                _delay = ReadDelay(img, n);
+                _i = 0;
+                img.SelectActiveFrame(FrameDimension.Time, 0);
+                return true;
+            }
+            catch { return false; }
+        }
+
+        // 每帧的延迟存在 0x5100 里，单位 1/100 秒。缺项、或者写成 1/100 秒的，
+        // 按 100ms 处理 —— 这是各浏览器对「没写延迟」的通行解释。
+        static int[] ReadDelay(Image img, int n)
+        {
+            int[] d = new int[n];
+            for (int i = 0; i < n; i++) d[i] = DefaultDelay;
+            try
+            {
+                PropertyItem p = img.GetPropertyItem(0x5100);
+                if (p != null && p.Value != null && p.Value.Length >= n * 4)
+                {
+                    for (int i = 0; i < n; i++)
+                    {
+                        int v = BitConverter.ToInt32(p.Value, i * 4) * 10;
+                        d[i] = v < 25 ? DefaultDelay : v;
+                    }
+                }
+            }
+            catch { }
+            return d;
+        }
+
+        public void Start()
+        {
+            if (_img == null || _frames <= 1) return;
+            _i = 0;
+            try { _img.SelectActiveFrame(FrameDimension.Time, 0); } catch { return; }
+            Invalidate();
+            _timer.Interval = _delay[0];
+            _timer.Start();
+        }
+
+        public void Stop() { _timer.Stop(); }
+
+        void Next()
+        {
+            _timer.Stop();
+            if (_img == null || _frames <= 1 || IsDisposed) return;
+            _i = (_i + 1) % _frames;
+            try { _img.SelectActiveFrame(FrameDimension.Time, _i); }
+            catch { return; }
+            Invalidate();
+            _timer.Interval = _delay[_i];
+            _timer.Start();
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            e.Graphics.Clear(BackColor);
+            if (_img == null) return;
+
+            float s = Math.Min((float)Width / _img.Width, (float)Height / _img.Height);
+            int w = (int)Math.Round(_img.Width * s);
+            int h = (int)Math.Round(_img.Height * s);
+
+            e.Graphics.InterpolationMode = InterpolationMode.NearestNeighbor;
+            e.Graphics.PixelOffsetMode = PixelOffsetMode.Half;   // 不偏半像素，边缘才不糊
+            e.Graphics.SmoothingMode = SmoothingMode.None;
+            e.Graphics.DrawImage(_img, new Rectangle((Width - w) / 2, (Height - h) / 2, w, h));
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _timer.Stop();
+                _timer.Dispose();
+                if (_img != null) { _img.Dispose(); _img = null; }
+                if (_src != null) { _src.Dispose(); _src = null; }
+            }
+            base.Dispose(disposing);
+        }
+    }
+
+    // 「关于」：两段像素动画并排放着播，一段讲名字打哪来，一段讲这程序干什么。
+    // 文字全部走 L，跟随当前界面语言；阿拉伯语下整窗镜像。
+    internal sealed class AboutForm : Form
+    {
+        const int GifW = 320;
+        const int GifH = 180;
+
+        readonly GifView _origin = new GifView();
+        readonly GifView _detect = new GifView();
+
+        public AboutForm()
+        {
+            Text = L.T("about.title");
+            StartPosition = FormStartPosition.CenterParent;
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false;
+            MinimizeBox = false;
+            ShowInTaskbar = false;
+            BackColor = Color.White;
+            Font = new Font(L.UiFont, 9F);
+            AutoScaleMode = AutoScaleMode.Dpi;
+            ClientSize = new Size(700, 404);
+            // 阿拉伯语整窗镜像；句柄还没建，这里翻转是安全的
+            RightToLeftLayout = L.IsRtl;
+            RightToLeft = L.IsRtl ? RightToLeft.Yes : RightToLeft.No;
+            ApplyIcon();
+
+            TableLayoutPanel root = new TableLayoutPanel();
+            root.Dock = DockStyle.Fill;
+            root.ColumnCount = 1;
+            root.Padding = new Padding(18, 16, 18, 12);
+            root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            for (int i = 0; i < 4; i++) root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+            root.Controls.Add(Header(), 0, 0);
+            root.Controls.Add(Gifs(), 0, 1);
+
+            Label story = new Label();
+            story.Text = L.T("about.story");
+            story.AutoSize = true;
+            story.MaximumSize = new Size(660, 0);
+            story.ForeColor = Color.FromArgb(90, 98, 112);
+            story.Margin = new Padding(1, 12, 0, 0);
+            root.Controls.Add(story, 0, 2);
+
+            root.Controls.Add(Footer(), 0, 3);
+            Controls.Add(root);
+
+            // 说明文字的长短随语言变：德语、俄语一行放不下会折成三四行。
+            // 高度按实际内容量出来再定，免得最后一行被窗口底边切掉。
+            Size pref = root.GetPreferredSize(new Size(700, 0));
+            if (pref.Height > 0) ClientSize = new Size(700, pref.Height);
+        }
+
+        // 两段动画并排。并排而不是上下叠：叠起来窗口要 690 高，768 的笔记本屏幕装不下。
+        Control Gifs()
+        {
+            TableLayoutPanel row = new TableLayoutPanel();
+            row.ColumnCount = 2;
+            row.AutoSize = true;
+            row.Dock = DockStyle.Fill;
+            row.Margin = new Padding(0, 10, 0, 0);
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+
+            row.Controls.Add(Cell(_origin, "Laocoon.origin.gif", L.T("about.cap1")), 0, 0);
+            row.Controls.Add(Cell(_detect, "Laocoon.detect.gif", L.T("about.cap2")), 1, 0);
+            return row;
+        }
+
+        Control Cell(GifView v, string res, string caption)
+        {
+            TableLayoutPanel c = new TableLayoutPanel();
+            c.ColumnCount = 1;
+            c.AutoSize = true;
+            c.Dock = DockStyle.Fill;
+            c.Margin = new Padding(0, 0, 2, 0);
+            c.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            c.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+            c.Controls.Add(Caption(caption), 0, 0);
+
+            v.Size = new Size(GifW, GifH);
+            v.Anchor = AnchorStyles.None;        // 宽窗口里居中，窄窗口也不会被拉伸
+            v.Margin = new Padding(0);
+            v.Load(res);
+            c.Controls.Add(v, 0, 1);
+            return c;
+        }
+
+        Control Header()
+        {
+            TableLayoutPanel head = new TableLayoutPanel();
+            head.ColumnCount = 2;
+            head.AutoSize = true;
+            head.Dock = DockStyle.Fill;
+            head.Margin = new Padding(0);
+            head.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 52F));
+            head.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+
+            PictureBox ico = new PictureBox();
+            ico.SizeMode = PictureBoxSizeMode.Zoom;
+            ico.Size = new Size(44, 44);
+            ico.Margin = new Padding(0, 0, 8, 0);
+            try { if (Icon != null) ico.Image = new System.Drawing.Icon(Icon, 48, 48).ToBitmap(); }
+            catch { }
+            head.Controls.Add(ico, 0, 0);
+
+            TableLayoutPanel txt = new TableLayoutPanel();
+            txt.ColumnCount = 1;
+            txt.AutoSize = true;
+            txt.Dock = DockStyle.Fill;
+            txt.Margin = new Padding(0);
+            txt.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            txt.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+            Label t = new Label();
+            t.Text = L.T("app.brand");
+            t.AutoSize = true;
+            t.Font = new Font(L.UiFont, 15F, FontStyle.Bold);
+            t.ForeColor = Color.FromArgb(23, 35, 59);
+            t.Margin = new Padding(0);
+            txt.Controls.Add(t, 0, 0);
+
+            Label v = new Label();
+            v.Text = L.F("about.version", AppVersion);
+            v.AutoSize = true;
+            v.ForeColor = Color.FromArgb(120, 128, 142);
+            v.Margin = new Padding(1, 3, 0, 0);
+            txt.Controls.Add(v, 0, 1);
+
+            head.Controls.Add(txt, 1, 0);
+            return head;
+        }
+
+        Label Caption(string s)
+        {
+            Label l = new Label();
+            l.Text = s;
+            l.AutoSize = true;
+            l.Font = new Font(L.UiFont, 8F, FontStyle.Bold);
+            l.ForeColor = Color.FromArgb(140, 148, 164);
+            l.Margin = new Padding(2, 0, 0, 6);
+            return l;
+        }
+
+
+        Control Footer()
+        {
+            TableLayoutPanel foot = new TableLayoutPanel();
+            foot.ColumnCount = 2;
+            foot.AutoSize = true;
+            foot.Dock = DockStyle.Fill;
+            foot.Margin = new Padding(0, 14, 0, 0);
+            foot.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            foot.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+
+            LinkLabel link = new LinkLabel();
+            link.Text = L.T("about.link");
+            link.AutoSize = true;
+            link.Anchor = AnchorStyles.Left;
+            link.Margin = new Padding(1, 6, 0, 0);
+            link.LinkColor = Color.FromArgb(37, 99, 235);
+            link.LinkClicked += delegate
+            {
+                try { Process.Start("https://github.com/xatwebez/Laocoon"); }
+                catch { }
+            };
+            foot.Controls.Add(link, 0, 0);
+
+            Button ok = new Button();
+            ok.Text = L.T("about.close");
+            ok.DialogResult = DialogResult.OK;
+            ok.AutoSize = true;                     // 德语 "Schließen" 比「关闭」宽得多
+            ok.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            ok.MinimumSize = new Size(88, 30);
+            ok.Padding = new Padding(12, 0, 12, 0);
+            ok.FlatStyle = FlatStyle.Flat;
+            ok.FlatAppearance.BorderColor = Color.FromArgb(214, 219, 227);
+            ok.BackColor = Color.White;
+            ok.ForeColor = Color.FromArgb(31, 41, 55);
+            ok.Cursor = Cursors.Hand;
+            ok.Margin = new Padding(6, 0, 0, 0);
+            foot.Controls.Add(ok, 1, 0);
+
+            AcceptButton = ok;
+            CancelButton = ok;
+            return foot;
+        }
+
+        // 版本号取自程序集，别在这里再手写一份 —— 两处对不上比不写还糟
+        static string AppVersion
+        {
+            get
+            {
+                try
+                {
+                    Version v = typeof(AboutForm).Assembly.GetName().Version;
+                    return v.Major + "." + v.Minor + "." + v.Build;
+                }
+                catch { return ""; }
+            }
+        }
+
+        void ApplyIcon()
+        {
+            try
+            {
+                using (Stream s = typeof(AboutForm).Assembly.GetManifestResourceStream("Laocoon.ico"))
+                {
+                    if (s != null) Icon = new System.Drawing.Icon(s);
+                }
+            }
+            catch { }
+        }
+
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+            _origin.Start();
+            _detect.Start();
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            _origin.Stop();
+            _detect.Stop();
+            base.OnFormClosed(e);
+        }
+    }
+
+    #endregion
+
     #region ---------- 入口 ----------
 
     internal static class Program
@@ -1967,6 +2356,13 @@ namespace Laocoon
                 UiShot(args.Length > 1 ? args[1] : "",
                        Array.IndexOf(args, "--welcome") >= 0,
                        Array.IndexOf(args, "--screen") >= 0);
+                return;
+            }
+
+            if (args.Length > 0 && args[0] == "--aboutshot")
+            {
+                AboutShot(args.Length > 1 ? args[1] : "",
+                          Array.IndexOf(args, "--screen") >= 0);
                 return;
             }
 
@@ -2397,6 +2793,44 @@ namespace Laocoon
                         }
                         bmp.Save(path, System.Drawing.Imaging.ImageFormat.Png);
                         Console.WriteLine("uishot saved: " + path + "  " + bmp.Width + "x" + bmp.Height + (screenGrab ? "  [screen]" : ""));
+                    }
+                }
+                f.Close();
+            }
+        }
+
+        // 诊断用：把「关于」窗口渲染成 PNG，用来核对排版与动画是否真的在走
+        static void AboutShot(string path, bool screenGrab)
+        {
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
+            using (AboutForm f = new AboutForm())
+            {
+                f.StartPosition = FormStartPosition.Manual;
+                f.Location = new Point(0, 0);
+                f.Show();
+                Application.DoEvents();
+                // 走几帧再抓：Sleep 期间消息泵是停的，得把等待切成小段，计时器消息才轮得上
+                for (int i = 0; i < 10; i++)
+                {
+                    System.Threading.Thread.Sleep(80);
+                    Application.DoEvents();
+                }
+
+                if (path.Length > 0)
+                {
+                    using (Bitmap bmp = new Bitmap(f.Width, f.Height))
+                    {
+                        if (screenGrab)
+                        {
+                            using (Graphics g = Graphics.FromImage(bmp))
+                                g.CopyFromScreen(f.Location, Point.Empty, f.Size);
+                        }
+                        else f.DrawToBitmap(bmp, new Rectangle(0, 0, f.Width, f.Height));
+                        bmp.Save(path, System.Drawing.Imaging.ImageFormat.Png);
+                        Console.WriteLine("aboutshot saved: " + path + "  " + bmp.Width + "x" + bmp.Height
+                            + (screenGrab ? "  [screen]" : ""));
                     }
                 }
                 f.Close();

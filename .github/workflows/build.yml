@@ -30,7 +30,7 @@ jobs:
       - name: Build
         run: dotnet build src/Laocoon.csproj -c Release
 
-      # 124 个键 × 12 种语言的完整性检查；缺任何一个键就以非 0 退出，让这一步红掉。
+      # 132 个键 × 12 种语言的完整性检查；缺任何一个键就以非 0 退出，让这一步红掉。
       # 注意：程序是 GUI 子系统的 exe，PowerShell 直接调用（& $exe）根本不会等待，
       # 6ms 就返回、既没有输出也没有退出码，所以必须 Start-Process -Wait。
       # 除了退出码，再断言日志里有 "i18ncheck OK"，多一层兜底。

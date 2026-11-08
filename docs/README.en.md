@@ -7,13 +7,28 @@
 >
 > This tool does the same thing: **poke a window, and hear what it is hiding.**
 
+## A note on the name: he did not save Troy
+
+Laocoön was a priest of Troy. He distrusted the wooden horse, drove his spear into its belly, and urged the city to burn it.
+
+He convinced no one. The gods were on the Greek side: two sea serpents rose from the water and crushed him and his two sons on the shore.
+The Trojans read it as proof that he had offended heaven, and hauled the horse inside with an easier mind. That night the hidden soldiers opened the gates, and Troy fell.
+
+This is the least romantic part of the story: **he was right, but he neither made anyone believe it nor lived to see it confirmed.**
+
+That is also where this tool stands. It does not judge for you and does not draw conclusions. It lays out what can be read from a window and its process — paths, signatures, loaded modules, child controls, and a few things it finds suspicious.
+
+Whether something is really suspicious, whether to act, whether to report it, whether this was a false alarm — that call is yours. It can be wrong, too: the "suspicion hints" are heuristics, not verdicts.
+
+The report is a list of facts, not a sentence. Look carefully, then act carefully.
+
 <p align="center">
   <img src="img/laocoon.gif" width="640" alt="Laocoon walks in from the horse's head side and drives a spear into its belly; armed men leap out of the breach and a label reads OCCUPIED, so he backs away with his spear raised">
 </p>
 
 You see a window you don't recognise — possibly something nasty. Press `F2`, drag the crosshair onto it, click. It lays out everything it can dig up about that window and the process behind it.
 
-- Single file `Laocoon.exe`, about **208 KB**
+- Single file `Laocoon.exe`, about **346 KB**
 - Zero third-party dependencies — only the .NET Framework 4.x that ships with Windows (Win10 / Win11, nothing to install)
 - No network, no upload, no registry writes, no config files, no background agent (unzip, run — and nothing is left on disk)
 - Twelve languages built in: **中文 / English / Русский / Français / Español / العربية / Deutsch / Português / 日本語 / 한국어 / हिन्दी / Italiano**
@@ -107,6 +122,7 @@ The whole report is plain text: columns line up, sections are separated, so you 
 
 ## Changelog
 
+- **1.5.0** — New About window (`F1` or the last toolbar button): two pixel animations, one on where the name comes from and one on what the tool does; both are embedded in the exe, nothing extra to download
 - **1.4.4** — Fixed an occasional crash when holding an arrow key to switch languages fast: the window-handle rebuild no longer happens inside the picker's own message handling, and the RTL flip waits until the keys are released
 - **1.4.3** — No more `Laocoon.ini`: the language follows the system, a manual switch lasts for the current run only, and the program leaves no file on disk
 - **1.4.2** — The three language files merged into one `Lang.cs`; pure housekeeping, no change to UI, wording or behaviour
@@ -159,6 +175,7 @@ Laocoon.exe --lang=ru              start in a given language (not written to the
 Laocoon.exe --uishot out.png --lang=ar            render the UI to a PNG
 Laocoon.exe --uishot out.png --lang=ar --welcome  render the welcome page only
 Laocoon.exe --uishot out.png --lang=ar --screen   grab the screen instead (DrawToBitmap fakes a selection in RTL boxes)
+Laocoon.exe --aboutshot out.png [--lang=xx]  render the About window (both animations run a few frames)
 ```
 
 Combining `--lang=` with `--uishot` renders all twelve UIs in one pass for a visual check.
